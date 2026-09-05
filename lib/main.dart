@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
@@ -185,9 +185,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
                                 child: FilledButton.icon(
                                   onPressed: loading ? null : (verificationId == null ? sendCode : verify),
                                   icon: Icon(verificationId == null ? Icons.sms_outlined : Icons.verified_outlined),
-                                  label: Text(
-                                    loading ? 'جارٍ التنفيذ...' : verificationId == null ? 'إرسال رمز التحقق' : 'تأكيد وتسجيل الدخول',
-                                  ),
+                                  label: Text(loading ? 'جارٍ التنفيذ...' : verificationId == null ? 'إرسال رمز التحقق' : 'تأكيد وتسجيل الدخول'),
                                 ),
                               ),
                               if (error.isNotEmpty)
@@ -393,7 +391,6 @@ class _SellPageState extends State<SellPage> {
       final Uint8List bytes = await image.readAsBytes();
       final url = await FirebaseService.instance.uploadCarImage(bytes, '${DateTime.now().millisecondsSinceEpoch}_$i.jpg');
       urls.add(url);
-      if (mounted) setState(() {});
     }
     return urls;
   }
@@ -434,35 +431,25 @@ class _SellPageState extends State<SellPage> {
   Widget imageGrid() => Wrap(
         spacing: 8,
         runSpacing: 8,
-        children: [
-          ...selectedImages.asMap().entries.map(
-                (entry) => Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.memory(
-                        FutureBuilder<Uint8List>(
-                          future: entry.value.readAsBytes(),
-                          builder: (_, snap) => snap.data == null ? Uint8List(0) : snap.data!,
-                        ) as Uint8List,
-                        width: 82,
-                        height: 82,
-                        fit: BoxFit.cover,
-                      ),
+        children: selectedImages.asMap().entries.map(
+              (entry) => Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(File(entry.value.path), width: 82, height: 82, fit: BoxFit.cover),
+                  ),
+                  Positioned(
+                    top: -7,
+                    right: -7,
+                    child: InkWell(
+                      onTap: () => removeImage(entry.key),
+                      child: const CircleAvatar(radius: 12, child: Icon(Icons.close, size: 15)),
                     ),
-                    Positioned(
-                      top: -7,
-                      right: -7,
-                      child: InkWell(
-                        onTap: () => removeImage(entry.key),
-                        child: const CircleAvatar(radius: 12, child: Icon(Icons.close, size: 15)),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-        ],
+            ).toList(),
       );
 
   @override

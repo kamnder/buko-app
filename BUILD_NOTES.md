@@ -1,0 +1,1 @@
+BUKO project files have been moved to the repository root. The app includes the Admin dashboard UI and the GitHub Actions workflow validates, tests, and builds the APK.

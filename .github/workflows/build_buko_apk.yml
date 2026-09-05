@@ -3,7 +3,8 @@ name: Build BUKO APK
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   build:
@@ -11,105 +12,32 @@ jobs:
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
-
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
-
       - name: Create Android platform files
         run: flutter create --platforms=android .
-
-      - name: Configure Android compatibility and signing
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          p = Path('android/app/build.gradle')
-          s = p.read_text()
-          if 'compileOptions {' in s:
-              s = re.sub(r'compileOptions\s*\{.*?\n\s*\}', "compileOptions {\n        sourceCompatibility JavaVersion.VERSION_17\n        targetCompatibility JavaVersion.VERSION_17\n    }", s, count=1, flags=re.S)
-          else:
-              s = s.replace('android {', "android {\n    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_17\n        targetCompatibility JavaVersion.VERSION_17\n    }", 1)
-          if 'kotlinOptions {' in s:
-              s = re.sub(r'kotlinOptions\s*\{.*?\n\s*\}', "kotlinOptions {\n        jvmTarget = '17'\n    }", s, count=1, flags=re.S)
-          else:
-              s = s.replace('android {', "android {\n    kotlinOptions {\n        jvmTarget = '17'\n    }", 1)
-          p.write_text(s)
-          PY
-          keytool -genkeypair -v \
-            -keystore android/buko-release.keystore \
-            -alias buko \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass changeit \
-            -keypass changeit \
-            -dname "CN=BUKO, OU=BUKO, O=BUKO, L=Khartoum, ST=Khartoum, C=SD"
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('android/app/build.gradle')
-          s = p.read_text()
-          if 'signingConfigs {' not in s:
-              s = s.replace('android {', '''android {
-    signingConfigs {
-        release {
-            storeFile file("../buko-release.keystore")
-            storePassword "changeit"
-            keyAlias "buko"
-            keyPassword "changeit"
-        }
-    }
-''', 1)
-          if 'signingConfig signingConfigs.release' not in s:
-              s = s.replace('defaultConfig {', '''buildTypes {
-        release {
-            signingConfig signingConfigs.release
-        }
-    }
-
-    defaultConfig {''', 1)
-          p.write_text(s)
-          PY
-
       - name: Fix Gradle version
         run: sed -i 's#gradle-[0-9.]*-bin.zip#gradle-9.3.1-bin.zip#' android/gradle/wrapper/gradle-wrapper.properties
-
       - name: Get dependencies
         run: flutter pub get
-
-      - name: Generate BUKO launcher icon
+      - name: Generate launcher icon
         run: dart run flutter_launcher_icons
-
-      - name: Patch Dart source
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('lib/main.dart')
-          s = p.read_text(encoding='utf-8').replace("import 'dart:math' as math;\n", '')
-          p.write_text(s, encoding='utf-8')
-          PY
-
       - name: Analyze
         run: flutter analyze --no-fatal-infos
-
       - name: Test
         run: flutter test
-
-      - name: Build signed APK
+      - name: Build release APK
         run: flutter build apk --release
-
       - name: Verify APK
         run: |
           set -e
-          APK="build/app/outputs/flutter-apk/app-release.apk"
-          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+          APK=build/app/outputs/flutter-apk/app-release.apk
           test -s "$APK"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
           "$APKSIGNER" verify --verbose "$APK"
-          "$APKSIGNER" verify --print-certs "$APK"
-          echo "APK signature verification passed."
-
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:

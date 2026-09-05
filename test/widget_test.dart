@@ -2,12 +2,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:buko/main.dart';
 
 void main() {
-  testWidgets('BUKO app loads after splash', (tester) async {
+  testWidgets('BUKO opens on authentication screen', (tester) async {
     await tester.pumpWidget(const BukoApp());
-    await tester.pump(const Duration(milliseconds: 1900));
     await tester.pumpAndSettle();
     expect(find.text('BUKO'), findsOneWidget);
-    expect(find.text('اعثر على سيارتك'), findsOneWidget);
-    expect(find.text('بحث متقدم'), findsOneWidget);
+    expect(find.text('حبابك عشرة'), findsOneWidget);
+    expect(find.text('رقم الهاتف السوداني'), findsOneWidget);
+    expect(find.text('دخول إلى BUKO'), findsOneWidget);
+    expect(find.text('حساب جديد'), findsOneWidget);
   });
 }

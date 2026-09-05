@@ -1,0 +1,1 @@
+The app renders the BUKO logo natively in Flutter, so no binary logo asset is required for the current build.

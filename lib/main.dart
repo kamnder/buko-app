@@ -337,7 +337,7 @@ class _HomePageState extends State<HomePage> {
     return ListView(padding: const EdgeInsets.all(18), children: [
       const Text('حسابي', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
       Card(child: ListTile(leading: const CircleAvatar(child: Icon(Icons.person)), title: Text(currentUser!.name), subtitle: Text(currentUser!.email))),
-      Card(child: ListTile(leading: Icon(isSeller ? Icons.storefront : Icons.shopping_bag, color: green), title: Text(isSeller ? 'حساب بائع' : 'حساب مشتري'), subtitle: Text(isSeller ? 'إعلاناتك تمر بمراجعة الإدارة.' : 'استكشف السيارات واحفظ المفضلة.'))),
+      Card(child: ListTile(leading: Icon(isSeller ? Icons.storefront : Icons.shopping_bag, color: green), title: Text(isSeller ? 'حساب بائع' : 'حساب مشتري'), subtitle: Text(isSeller ? 'إعلاناتك تحتاج موافقة الإدارة.' : 'استكشف السيارات واحفظ المفضلة.'))),
       ListTile(leading: const Icon(Icons.logout), title: const Text('تسجيل الخروج'), onTap: () => setState(() => currentUser = null)),
     ]);
   }
@@ -362,17 +362,17 @@ class _HomePageState extends State<HomePage> {
       return;
     }
     setState(() => pending.add(PendingAd(car)));
-    _message('تم إرسال الإعلان للمراجعة ولن يظهر للعامة حتى الموافقة.');
+    _message('تم إرسال الإعلان للمراجعة.');
   }
 
   Future<void> _login() async {
     final result = await showDialog<dynamic>(context: context, builder: (_) => LoginDialog(users: users));
     if (!mounted || result == null) return;
     if (result == adminCode) {
-      await Navigator.push(context, MaterialPageRoute(builder: (_) => AdminPage(pending: pending, users: users, cars: cars, onApprove: _approve, onReject: _reject, onPost: _adminPost)));
-    } else if (result is User) {
-      setState(() => currentUser = result);
+      await Navigator.push(context, MaterialPageRoute(builder: (_) => AdminPage(pending: pending, users: users, cars: cars, onApprove: (i) => setState(() => cars.add(pending.removeAt(i).car)), onReject: (i) => setState(() => pending.removeAt(i)), onPost: (car) => setState(() => cars.insert(0, car))));
+      return;
     }
+    if (result is User) setState(() => currentUser = result);
   }
 
   Future<void> _register() async {
@@ -388,22 +388,6 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void _approve(int index) {
-    if (index < 0 || index >= pending.length) return;
-    final ad = pending.removeAt(index);
-    setState(() => cars.insert(0, ad.car));
-  }
-
-  void _reject(int index) {
-    if (index < 0 || index >= pending.length) return;
-    setState(() => pending.removeAt(index));
-  }
-
-  void _adminPost(Car car) {
-    setState(() => cars.insert(0, car));
-    _message('تم نشر المنشور مباشرة بواسطة الإدارة');
-  }
-
   Future<void> _showFilters() async {
     var type = selectedType;
     var city = selectedCity;
@@ -412,19 +396,8 @@ class _HomePageState extends State<HomePage> {
       builder: (dialogContext) => AlertDialog(
         title: const Text('البحث المتقدم'),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          DropdownButtonFormField<String>(
-            value: type,
-            decoration: const InputDecoration(labelText: 'نوع السيارة'),
-            items: const ['الكل', 'سيدان', 'دفع رباعي', 'بيك أب'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-            onChanged: (value) => type = value ?? type,
-          ),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<String>(
-            value: city,
-            decoration: const InputDecoration(labelText: 'المحافظة'),
-            items: const ['الكل', 'القاهرة', 'الجيزة', 'الإسكندرية'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-            onChanged: (value) => city = value ?? city,
-          ),
+          DropdownButtonFormField<String>(initialValue: type, items: const ['الكل', 'سيدان', 'دفع رباعي', 'بيك أب'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => type = v ?? type),
+          DropdownButtonFormField<String>(initialValue: city, items: const ['الكل', 'القاهرة', 'الجيزة', 'الإسكندرية'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => city = v ?? city),
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
@@ -482,7 +455,7 @@ class _LoginDialogState extends State<LoginDialog> {
       content: Column(mainAxisSize: MainAxisSize.min, children: [
         TextField(controller: id, decoration: const InputDecoration(labelText: 'البريد الإلكتروني أو رمز الإدارة')),
         TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'كلمة المرور')),
-        DropdownButtonFormField<String>(value: role, items: const [DropdownMenuItem(value: 'buyer', child: Text('مشتري')), DropdownMenuItem(value: 'seller', child: Text('بائع'))], onChanged: (v) => setState(() => role = v ?? role)),
+        DropdownButtonFormField<String>(initialValue: role, items: const [DropdownMenuItem(value: 'buyer', child: Text('مشتري')), DropdownMenuItem(value: 'seller', child: Text('بائع'))], onChanged: (v) => setState(() => role = v ?? role)),
         if (error.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text(error, style: const TextStyle(color: Colors.red))),
       ]),
       actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')), FilledButton(onPressed: submit, child: const Text('دخول'))],
@@ -524,7 +497,7 @@ class _RegisterDialogState extends State<RegisterDialog> {
         TextField(controller: name, decoration: const InputDecoration(labelText: 'الاسم')),
         TextField(controller: email, decoration: const InputDecoration(labelText: 'البريد الإلكتروني')),
         TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'كلمة المرور')),
-        DropdownButtonFormField<String>(value: role, items: const [DropdownMenuItem(value: 'buyer', child: Text('مشتري')), DropdownMenuItem(value: 'seller', child: Text('بائع'))], onChanged: (v) => setState(() => role = v ?? role)),
+        DropdownButtonFormField<String>(initialValue: role, items: const [DropdownMenuItem(value: 'buyer', child: Text('مشتري')), DropdownMenuItem(value: 'seller', child: Text('بائع'))], onChanged: (v) => setState(() => role = v ?? role)),
       ]),
       actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')), FilledButton(onPressed: submit, child: const Text('إنشاء'))],
     );
@@ -542,10 +515,10 @@ class SellPage extends StatefulWidget {
 
 class _SellPageState extends State<SellPage> {
   final name = TextEditingController();
-  final year = TextEditingController(text: '2022');
+  final year = TextEditingController();
   final price = TextEditingController();
-  String city = 'القاهرة';
   String type = 'سيدان';
+  String city = 'القاهرة';
 
   @override
   void dispose() {
@@ -560,13 +533,30 @@ class _SellPageState extends State<SellPage> {
     if (name.text.trim().isEmpty || price.text.trim().isEmpty || y == null) return;
     widget.onSubmit(Car(name.text.trim(), y, price.text.trim(), city, type, seller: 'بائع'));
     name.clear();
+    year.clear();
     price.clear();
   }
 
   @override
   Widget build(BuildContext context) {
     if (!widget.isSeller) {
-      return Center(child: Padding(padding: const EdgeInsets.all(25), child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.lock_outline, size: 60, color: yellow), const SizedBox(height: 14), const Text('بيع سيارتك', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)), const SizedBox(height: 8), const Text('هذه الميزة متاحة لحسابات البائعين فقط.'), const SizedBox(height: 18), const Text('سجّل حساب بائع من صفحة حسابي.')]));
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(25),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.lock_outline, size: 60, color: yellow),
+              SizedBox(height: 14),
+              Text('بيع سيارتك', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
+              SizedBox(height: 8),
+              Text('هذه الميزة متاحة لحسابات البائعين فقط.'),
+              SizedBox(height: 18),
+              Text('سجّل حساب بائع من صفحة حسابي.'),
+            ],
+          ),
+        ),
+      );
     }
 
     return ListView(padding: const EdgeInsets.all(18), children: [
@@ -580,9 +570,9 @@ class _SellPageState extends State<SellPage> {
       const SizedBox(height: 10),
       TextField(controller: price, decoration: const InputDecoration(labelText: 'السعر', filled: true, fillColor: Colors.white)),
       const SizedBox(height: 10),
-      DropdownButtonFormField<String>(value: type, decoration: const InputDecoration(labelText: 'النوع'), items: const ['سيدان', 'دفع رباعي', 'بيك أب'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => type = v ?? type)),
+      DropdownButtonFormField<String>(initialValue: type, decoration: const InputDecoration(labelText: 'النوع'), items: const ['سيدان', 'دفع رباعي', 'بيك أب'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => type = v ?? type)),
       const SizedBox(height: 10),
-      DropdownButtonFormField<String>(value: city, decoration: const InputDecoration(labelText: 'المحافظة'), items: const ['القاهرة', 'الجيزة', 'الإسكندرية'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => city = v ?? city)),
+      DropdownButtonFormField<String>(initialValue: city, decoration: const InputDecoration(labelText: 'المحافظة'), items: const ['القاهرة', 'الجيزة', 'الإسكندرية'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => city = v ?? city)),
       const SizedBox(height: 18),
       FilledButton.icon(onPressed: submit, icon: const Icon(Icons.send), label: const Text('إرسال للمراجعة')),
     ]);
@@ -610,23 +600,28 @@ class _DetailsPageState extends State<DetailsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(textDirection: TextDirection.rtl, child: Scaffold(
+    return Scaffold(
       appBar: AppBar(title: const Text('تفاصيل السيارة')),
       body: ListView(padding: const EdgeInsets.all(18), children: [
-        Container(height: 210, decoration: BoxDecoration(color: const Color(0xFF142E42), borderRadius: BorderRadius.circular(24)), child: const Center(child: Icon(Icons.directions_car, size: 120, color: green))),
+        Container(height: 190, decoration: BoxDecoration(color: const Color(0xFF14283A), borderRadius: BorderRadius.circular(22)), child: const Icon(Icons.directions_car, size: 100, color: green)),
         const SizedBox(height: 18),
         Text(widget.car.name, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
-        Text(widget.car.price, style: const TextStyle(fontSize: 23, color: yellow, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 15),
-        Card(color: Colors.white, child: Padding(padding: const EdgeInsets.all(15), child: Column(children: [_row('السنة', '${widget.car.year}'), _row('المحافظة', widget.car.city), _row('النوع', widget.car.type), _row('البائع', widget.car.seller)]))),
+        Text(widget.car.price, style: const TextStyle(fontSize: 23, color: green, fontWeight: FontWeight.bold)),
+        Card(color: Colors.white, child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
+          _row('السنة', '${widget.car.year}'),
+          _row('المدينة', widget.car.city),
+          _row('النوع', widget.car.type),
+          _row('البائع', widget.car.seller),
+        ]))),
         const SizedBox(height: 12),
         FilledButton.icon(onPressed: () { setState(() => favorite = !favorite); widget.onFavorite(); }, icon: Icon(favorite ? Icons.favorite : Icons.favorite_border), label: Text(favorite ? 'إزالة من المفضلة' : 'حفظ في المفضلة')),
-        OutlinedButton.icon(onPressed: () => showDialog<void>(context: context, builder: (_) => const AlertDialog(title: Text('التواصل مع البائع'), content: Text('سيتم ربط الاتصال والرسائل بخدمة حقيقية لاحقاً.'))), icon: const Icon(Icons.phone), label: const Text('التواصل مع البائع')),
       ]),
-    ));
+    );
   }
 
-  Widget _row(String a, String b) => Padding(padding: const EdgeInsets.symmetric(vertical: 7), child: Row(children: [Expanded(child: Text(a, style: const TextStyle(color: Colors.black54))), Text(b, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold))]));
+  Widget _row(String title, String value) {
+    return Padding(padding: const EdgeInsets.symmetric(vertical: 7), child: Row(children: [Expanded(child: Text(title, style: const TextStyle(color: Colors.black54))), Text(value, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold))]));
+  }
 }
 
 class AdminPage extends StatefulWidget {
@@ -644,40 +639,43 @@ class AdminPage extends StatefulWidget {
 }
 
 class _AdminPageState extends State<AdminPage> {
+  Future<void> _addPost() async {
+    final result = await showDialog<Car>(context: context, builder: (_) => const AdminPostDialog());
+    if (!mounted || result == null) return;
+    widget.onPost(result);
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Directionality(textDirection: TextDirection.rtl, child: Scaffold(
-      appBar: AppBar(title: const Text('لوحة تحكم BUKO')),
-      body: ListView(padding: const EdgeInsets.all(16), children: [
-        Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(color: const Color(0xFF142E42), borderRadius: BorderRadius.circular(20)), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('مرحباً أيها المدير', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)), SizedBox(height: 5), Text('تحكم بالمنشورات والمستخدمين والمحتوى.')])),
-        const SizedBox(height: 14),
-        Row(children: [Expanded(child: _stat('السيارات', widget.cars.length.toString(), Icons.directions_car)), const SizedBox(width: 8), Expanded(child: _stat('المراجعة', widget.pending.length.toString(), Icons.pending_actions)), const SizedBox(width: 8), Expanded(child: _stat('المستخدمون', widget.users.length.toString(), Icons.people))]),
-        const SizedBox(height: 18),
-        FilledButton.icon(onPressed: _addPost, icon: const Icon(Icons.add), label: const Text('إضافة منشور جديد مباشرة')),
-        const SizedBox(height: 18),
-        const Text('طلبات الإعلانات', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 8),
-        if (widget.pending.isEmpty) const Card(child: Padding(padding: EdgeInsets.all(18), child: Text('لا توجد إعلانات بانتظار المراجعة.'))),
-        ...List.generate(widget.pending.length, (i) => _pendingTile(i)),
-        const SizedBox(height: 18),
-        const Text('المستخدمون', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-        ...widget.users.map((u) => Card(child: ListTile(leading: const Icon(Icons.person), title: Text(u.name), subtitle: Text('${u.email} • ${u.role}')))),
-      ]),
-    ));
-  }
-
-  Widget _stat(String title, String value, IconData icon) => Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15)), child: Column(children: [Icon(icon, color: green), const SizedBox(height: 5), Text(value, style: const TextStyle(color: navy, fontSize: 20, fontWeight: FontWeight.w900)), Text(title, style: const TextStyle(color: Colors.black54, fontSize: 11))]));
-
-  Widget _pendingTile(int index) {
-    final car = widget.pending[index].car;
-    return Card(color: Colors.white, child: ListTile(title: Text(car.name, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)), subtitle: Text('${car.year} • ${car.city} • ${car.price}', style: const TextStyle(color: Colors.black54)), trailing: Wrap(children: [IconButton(onPressed: () { widget.onApprove(index); setState(() {}); }, icon: const Icon(Icons.check, color: green)), IconButton(onPressed: () { widget.onReject(index); setState(() {}); }, icon: const Icon(Icons.close, color: Colors.red))]));
-  }
-
-  Future<void> _addPost() async {
-    final car = await showDialog<Car>(context: context, builder: (_) => const AdminPostDialog());
-    if (!mounted || car == null) return;
-    widget.onPost(car);
-    setState(() {});
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('لوحة تحكم BUKO')),
+        body: ListView(padding: const EdgeInsets.all(16), children: [
+          Card(child: ListTile(leading: const Icon(Icons.dashboard, color: green), title: const Text('إدارة التطبيق'), subtitle: Text('${widget.cars.length} منشور • ${widget.users.length} مستخدم • ${widget.pending.length} بانتظار المراجعة'))),
+          const SizedBox(height: 12),
+          FilledButton.icon(onPressed: _addPost, icon: const Icon(Icons.add), label: const Text('إضافة منشور مباشر من الأدمن')),
+          const SizedBox(height: 20),
+          const Text('طلبات الإعلانات', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
+          if (widget.pending.isEmpty) const Padding(padding: EdgeInsets.all(20), child: Center(child: Text('لا توجد طلبات معلقة'))),
+          ...List.generate(widget.pending.length, (index) {
+            final car = widget.pending[index].car;
+            return Card(color: Colors.white, child: ListTile(
+              title: Text(car.name, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+              subtitle: Text('${car.year} • ${car.city} • ${car.price}', style: const TextStyle(color: Colors.black54)),
+              trailing: Wrap(children: [
+                IconButton(onPressed: () { widget.onApprove(index); setState(() {}); }, icon: const Icon(Icons.check, color: green)),
+                IconButton(onPressed: () { widget.onReject(index); setState(() {}); }, icon: const Icon(Icons.close, color: Colors.red)),
+              ]),
+            ));
+          }),
+          const SizedBox(height: 20),
+          const Text('المستخدمون', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
+          ...widget.users.map((u) => Card(child: ListTile(leading: const Icon(Icons.person), title: Text(u.name), subtitle: Text('${u.email} • ${u.role}')))),
+        ]),
+      ),
+    );
   }
 }
 
@@ -690,13 +688,18 @@ class AdminPostDialog extends StatefulWidget {
 
 class _AdminPostDialogState extends State<AdminPostDialog> {
   final name = TextEditingController();
-  final year = TextEditingController(text: '2022');
+  final year = TextEditingController(text: '2024');
   final price = TextEditingController();
   String city = 'القاهرة';
   String type = 'سيدان';
 
   @override
-  void dispose() { name.dispose(); year.dispose(); price.dispose(); super.dispose(); }
+  void dispose() {
+    name.dispose();
+    year.dispose();
+    price.dispose();
+    super.dispose();
+  }
 
   void submit() {
     final y = int.tryParse(year.text.trim());
@@ -707,13 +710,13 @@ class _AdminPostDialogState extends State<AdminPostDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('منشور جديد من الإدارة'),
+      title: const Text('إضافة منشور أدمن'),
       content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
         TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم السيارة')),
         TextField(controller: year, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'السنة')),
         TextField(controller: price, decoration: const InputDecoration(labelText: 'السعر')),
-        DropdownButtonFormField<String>(value: type, items: const ['سيدان', 'دفع رباعي', 'بيك أب'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => type = v ?? type)),
-        DropdownButtonFormField<String>(value: city, items: const ['القاهرة', 'الجيزة', 'الإسكندرية'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => city = v ?? city)),
+        DropdownButtonFormField<String>(initialValue: type, items: const ['سيدان', 'دفع رباعي', 'بيك أب'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => type = v ?? type)),
+        DropdownButtonFormField<String>(initialValue: city, items: const ['القاهرة', 'الجيزة', 'الإسكندرية'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => city = v ?? city)),
       ])),
       actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')), FilledButton(onPressed: submit, child: const Text('نشر الآن'))],
     );

@@ -48,6 +48,28 @@ jobs:
       - name: Generate launcher icon
         run: dart run flutter_launcher_icons
 
+      - name: Wire application features
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('lib/main.dart')
+          s = p.read_text()
+
+          if "import 'admin_page.dart';" not in s:
+              s = s.replace("import 'firebase_options.dart';\n", "import 'firebase_options.dart';\nimport 'admin_page.dart';\n", 1)
+
+          old = "class AccountPage extends StatelessWidget { const AccountPage({super.key}); @override Widget build(BuildContext context) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.person, size: 64), const SizedBox(height: 12), const Text('حساب BUKO', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), const SizedBox(height: 16), FilledButton.tonalIcon(onPressed: () => buko_service.FirebaseService.instance.signOut(), icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج'))])); }"
+          new = """class AccountPage extends StatelessWidget {\n  const AccountPage({super.key});\n\n  Future<bool> _isAdmin() async {\n    final user = auth.FirebaseAuth.instance.currentUser;\n    if (user == null) return false;\n    final result = await user.getIdTokenResult();\n    return result.claims?['admin'] == true;\n  }\n\n  @override\n  Widget build(BuildContext context) => FutureBuilder<bool>(\n    future: _isAdmin(),\n    builder: (_, snap) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [\n      const Icon(Icons.person, size: 64),\n      const SizedBox(height: 12),\n      const Text('حساب BUKO', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),\n      const SizedBox(height: 16),\n      if (snap.data == true) ...[\n        FilledButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminPage())), icon: const Icon(Icons.admin_panel_settings), label: const Text('لوحة تحكم الإدارة')),\n        const SizedBox(height: 10),\n      ],\n      FilledButton.tonalIcon(onPressed: () => buko_service.FirebaseService.instance.signOut(), icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج')),\n    ])),\n  );\n}"""
+          if old in s:
+              s = s.replace(old, new, 1)
+          else:
+              s = re.sub(r'class AccountPage extends StatelessWidget \{.*?\n\}', new, s, count=1, flags=re.S)
+
+          p.write_text(s)
+          PY
+
       - name: Fix Dart imports
         run: |
           python3 - <<'PY'
@@ -66,7 +88,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add lib/main.dart
-            git commit -m "fix: normalize Dart imports"
+            git commit -m "feat: wire admin dashboard into account"
             git push
           fi
 

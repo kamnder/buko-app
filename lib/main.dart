@@ -9,7 +9,7 @@ class BukoApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'بوكو',
+      title: 'BUKO',
       theme: ThemeData(
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFF071A2A),
@@ -24,14 +24,22 @@ class BukoApp extends StatelessWidget {
 }
 
 class Car {
-  final String name, year, price, city, type;
-  const Car(this.name, this.year, this.price, this.city, this.type);
+  final String name;
+  final String year;
+  final String price;
+  final String city;
+  final String type;
+  final String fuel;
+
+  const Car(this.name, this.year, this.price, this.city, this.type,
+      [this.fuel = 'بنزين']);
 }
 
-const cars = [
+const seedCars = <Car>[
   Car('تويوتا هايلوكس', '2019', '85,000,000 ج.س', 'أم درمان', 'بيك أب'),
   Car('تويوتا برادو', '2018', '120,000,000 ج.س', 'بحري', 'دفع رباعي'),
   Car('هيونداي النترا', '2021', '45,000,000 ج.س', 'الخرطوم', 'سيدان'),
+  Car('كيا سبورتاج', '2020', '68,000,000 ج.س', 'الخرطوم', 'دفع رباعي'),
 ];
 
 class HomePage extends StatefulWidget {
@@ -44,22 +52,34 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int tab = 0;
   String query = '';
+  String selectedType = 'الكل';
+  String selectedCity = 'الكل';
   final favorites = <int>{};
+  final listings = <Car>[...seedCars];
+
+  List<Car> get filteredCars {
+    return List.generate(listings.length, (i) => i)
+        .where((i) {
+          final c = listings[i];
+          final text = '${c.name} ${c.city} ${c.type} ${c.fuel}'.toLowerCase();
+          final q = query.toLowerCase();
+          return (q.isEmpty || text.contains(q)) &&
+              (selectedType == 'الكل' || c.type == selectedType) &&
+              (selectedCity == 'الكل' || c.city == selectedCity);
+        })
+        .map((i) => i)
+        .toList()
+        .map((i) => listings[i])
+        .toList();
+  }
 
   @override
   Widget build(BuildContext context) {
     final pages = <Widget>[
       _home(),
-      const SimplePage(
-        'استكشاف',
-        'ابحث عن السيارات حسب المدينة أو النوع أو السعر',
-      ),
-      const SimplePage(
-        'بيع سيارتك',
-        'أضف سيارتك بسهولة ووصل إلى مشترين في السودان',
-        button: 'إضافة إعلان',
-      ),
-      FavoritePage(indices: favorites),
+      _explore(),
+      _sell(),
+      _favorites(),
       const AccountPage(),
     ];
 
@@ -71,31 +91,11 @@ class _HomePageState extends State<HomePage> {
           selectedIndex: tab,
           onDestinationSelected: (i) => setState(() => tab = i),
           destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: 'الرئيسية',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.explore_outlined),
-              selectedIcon: Icon(Icons.explore),
-              label: 'استكشاف',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.sell_outlined),
-              selectedIcon: Icon(Icons.sell),
-              label: 'بيع',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.favorite_border),
-              selectedIcon: Icon(Icons.favorite),
-              label: 'المفضلة',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
-              label: 'حسابي',
-            ),
+            NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'الرئيسية'),
+            NavigationDestination(icon: Icon(Icons.explore_outlined), selectedIcon: Icon(Icons.explore), label: 'استكشاف'),
+            NavigationDestination(icon: Icon(Icons.sell_outlined), selectedIcon: Icon(Icons.sell), label: 'بيع'),
+            NavigationDestination(icon: Icon(Icons.favorite_border), selectedIcon: Icon(Icons.favorite), label: 'المفضلة'),
+            NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'حسابي'),
           ],
         ),
       ),
@@ -103,11 +103,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _home() {
-    final filtered = cars
-        .where(
-          (c) => query.isEmpty || '${c.name} ${c.city} ${c.type}'.contains(query),
-        )
-        .toList();
+    final indexes = List.generate(listings.length, (i) => i).where((i) {
+      final c = listings[i];
+      return query.isEmpty || '${c.name} ${c.city} ${c.type}'.toLowerCase().contains(query.toLowerCase());
+    }).take(4).toList();
 
     return ListView(
       padding: const EdgeInsets.all(18),
@@ -118,46 +117,34 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
-            gradient: const LinearGradient(
-              colors: [Color(0xFF102C40), Color(0xFF061521)],
-            ),
+            gradient: const LinearGradient(colors: [Color(0xFF102C40), Color(0xFF061521)]),
           ),
           child: const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'السوق الأول للسيارات المستعملة في السودان',
-                style: TextStyle(color: Colors.white70),
-              ),
+              Text('السوق الأول للسيارات المستعملة في السودان', style: TextStyle(color: Colors.white70)),
               SizedBox(height: 12),
-              Text(
-                'إبحث عن سيارتك',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
-              ),
-              Text(
-                'بكل سهولة في السودان',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF39C86A),
-                ),
-              ),
+              Text('إبحث عن سيارتك', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
+              Text('بكل سهولة في السودان', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF39C86A))),
             ],
           ),
         ),
         const SizedBox(height: 14),
         TextField(
           onChanged: (v) => setState(() => query = v.trim()),
+          onSubmitted: (_) => setState(() => tab = 1),
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.white,
             hintText: 'إبحث عن ماركة أو موديل أو كلمة مفتاحية...',
             hintStyle: const TextStyle(color: Colors.black54),
             prefixIcon: const Icon(Icons.search, color: Color(0xFF102030)),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(20),
-              borderSide: BorderSide.none,
+            suffixIcon: IconButton(
+              color: const Color(0xFF16A34A),
+              icon: const Icon(Icons.tune),
+              onPressed: _showFilters,
             ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
           ),
           style: const TextStyle(color: Colors.black87),
         ),
@@ -165,479 +152,336 @@ class _HomePageState extends State<HomePage> {
         _section('البحث المتقدم'),
         Card(
           color: Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: [
-                const Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'فلترة السيارات',
-                        style: TextStyle(
-                          color: Color(0xFF138B40),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    Icon(Icons.tune, color: Color(0xFF132334)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    'الماركة',
-                    'الموديل',
-                    'السعر',
-                    'الوقود',
-                    'المحافظة',
-                    'نوع السيارة',
-                  ].map((x) => Chip(label: Text(x))).toList(),
-                ),
-              ],
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: _showFilters,
+            child: const Padding(
+              padding: EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  CircleAvatar(backgroundColor: Color(0xFFE8F7ED), child: Icon(Icons.tune, color: Color(0xFF16A34A))),
+                  SizedBox(width: 12),
+                  Expanded(child: Text('فلترة حسب النوع والمدينة', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold))),
+                  Icon(Icons.chevron_left, color: Colors.black54),
+                ],
+              ),
             ),
           ),
         ),
         const SizedBox(height: 16),
         _section('السيارات المميزة'),
-        ...filtered.map((car) {
-          final index = cars.indexOf(car);
-          return Card(
-            color: Colors.white,
-            child: ListTile(
-              leading: const CircleAvatar(
-                backgroundColor: Color(0xFFE8F7ED),
-                child: Icon(Icons.directions_car, color: Color(0xFF16A34A)),
-              ),
-              title: Text(
-                car.name,
-                style: const TextStyle(
-                  color: Colors.black87,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              subtitle: Text(
-                '${car.year} • ${car.city}\n${car.price}',
-                style: const TextStyle(color: Colors.black54),
-              ),
-              trailing: IconButton(
-                onPressed: () {
-                  setState(() {
-                    if (favorites.contains(index)) {
-                      favorites.remove(index);
-                    } else {
-                      favorites.add(index);
-                    }
-                  });
-                },
-                icon: Icon(
-                  favorites.contains(index)
-                      ? Icons.favorite
-                      : Icons.favorite_border,
-                  color: const Color(0xFF16A34A),
-                ),
-              ),
-            ),
-          );
-        }),
-      ],
-    );
-  }
-
-  Widget _section(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-}
-
-class Logo extends StatelessWidget {
-  const Logo({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        CircleAvatar(
-          radius: 24,
-          backgroundColor: Color(0xFF16A34A),
-          child: Icon(Icons.directions_car, color: Colors.white),
-        ),
-        SizedBox(width: 10),
-        Text(
-          'BUKO',
-          style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900),
-        ),
-      ],
-    );
-  }
-}
-
-class FavoritePage extends StatelessWidget {
-  final Set<int> indices;
-  const FavoritePage({super.key, required this.indices});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        const Text(
-          'المفضلة',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 15),
-        if (indices.isEmpty)
-          const Text(
-            'لم تحفظ أي سيارة بعد',
-            style: TextStyle(color: Colors.white70),
-          ),
-        ...indices.map(
-          (i) => Card(
-            color: Colors.white,
-            child: ListTile(
-              title: Text(
-                cars[i].name,
-                style: const TextStyle(color: Colors.black87),
-              ),
-              subtitle: Text(
-                cars[i].price,
-                style: const TextStyle(color: Colors.black54),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class AccountPage extends StatelessWidget {
-  const AccountPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        const Logo(),
-        const SizedBox(height: 18),
-        const Text(
-          'حسابي',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
-        ),
+        if (indexes.isEmpty)
+          const Padding(padding: EdgeInsets.all(20), child: Center(child: Text('لا توجد سيارات مطابقة للبحث'))),
+        ...indexes.map((i) => _carCard(i)),
         const SizedBox(height: 8),
-        const Text(
-          'إدارة إعلاناتك ومفضلاتك وإعدادات الحساب',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white70),
-        ),
-        const SizedBox(height: 25),
-        _tile(
-          context,
-          Icons.person_outline,
-          'تسجيل الدخول',
-          'الوصول إلى حسابك وإعلاناتك',
-          () {},
-        ),
-        _tile(
-          context,
-          Icons.favorite_border,
-          'المفضلة',
-          'السيارات التي حفظتها',
-          () {},
-        ),
-        _tile(
-          context,
-          Icons.admin_panel_settings_outlined,
-          'لوحة تحكم الإدارة',
-          'إدارة الإعلانات والمستخدمين والإحصائيات',
-          () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const AdminDashboardPage(),
-            ),
-          ),
+        FilledButton.icon(
+          onPressed: () => setState(() => tab = 1),
+          icon: const Icon(Icons.grid_view),
+          label: const Text('عرض كل السيارات'),
         ),
       ],
     );
   }
 
-  Widget _tile(
-    BuildContext context,
-    IconData icon,
-    String title,
-    String sub,
-    VoidCallback tap,
-  ) {
-    return Card(
-      color: Colors.white,
-      child: ListTile(
-        onTap: tap,
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFFE8F7ED),
-          child: Icon(icon, color: const Color(0xFF16A34A)),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        subtitle: Text(
-          sub,
-          style: const TextStyle(color: Colors.black54),
-        ),
-        trailing: const Icon(Icons.chevron_left, color: Colors.black54),
-      ),
+  Widget _explore() {
+    final indexes = List.generate(listings.length, (i) => i).where((i) {
+      final c = listings[i];
+      final text = '${c.name} ${c.city} ${c.type} ${c.fuel}'.toLowerCase();
+      return (query.isEmpty || text.contains(query.toLowerCase())) &&
+          (selectedType == 'الكل' || c.type == selectedType) &&
+          (selectedCity == 'الكل' || c.city == selectedCity);
+    }).toList();
+
+    return ListView(
+      padding: const EdgeInsets.all(18),
+      children: [
+        const Text('استكشاف السيارات', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 6),
+        const Text('اختر السيارة المناسبة لك', style: TextStyle(color: Colors.white70)),
+        const SizedBox(height: 16),
+        Row(children: [
+          Expanded(child: TextField(
+            onChanged: (v) => setState(() => query = v.trim()),
+            decoration: InputDecoration(
+              filled: true, fillColor: Colors.white, hintText: 'بحث...', hintStyle: const TextStyle(color: Colors.black54),
+              prefixIcon: const Icon(Icons.search, color: Colors.black54),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+            ),
+            style: const TextStyle(color: Colors.black87),
+          )),
+          const SizedBox(width: 8),
+          IconButton.filled(onPressed: _showFilters, icon: const Icon(Icons.filter_list)),
+        ]),
+        const SizedBox(height: 14),
+        Wrap(spacing: 8, children: [
+          Chip(label: Text(selectedType)),
+          Chip(label: Text(selectedCity)),
+          if (query.isNotEmpty) InputChip(label: Text(query), onDeleted: () => setState(() => query = '')),
+        ]),
+        const SizedBox(height: 8),
+        Text('${indexes.length} سيارة متاحة', style: const TextStyle(color: Colors.white70)),
+        const SizedBox(height: 8),
+        ...indexes.map((i) => _carCard(i)),
+      ],
     );
   }
-}
 
-class AdminDashboardPage extends StatefulWidget {
-  const AdminDashboardPage({super.key});
+  Widget _sell() {
+    return SellPage(onAdd: (car) {
+      setState(() {
+        listings.add(car);
+        tab = 0;
+      });
+      _snack('تم نشر إعلانك بنجاح');
+    });
+  }
 
-  @override
-  State<AdminDashboardPage> createState() => _AdminDashboardPageState();
-}
+  Widget _favorites() {
+    final valid = favorites.where((i) => i >= 0 && i < listings.length).toList();
+    return ListView(
+      padding: const EdgeInsets.all(18),
+      children: [
+        const Text('المفضلة', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        const Text('السيارات التي حفظتها للرجوع إليها لاحقاً', style: TextStyle(color: Colors.white70)),
+        const SizedBox(height: 16),
+        if (valid.isEmpty) const Center(child: Padding(padding: EdgeInsets.all(35), child: Text('لم تحفظ أي سيارة بعد'))),
+        ...valid.map((i) => _carCard(i)),
+      ],
+    );
+  }
 
-class _AdminDashboardPageState extends State<AdminDashboardPage> {
-  int pending = 7;
-  int active = 124;
-  int users = 86;
-  int reports = 3;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F8),
-      appBar: AppBar(
-        title: const Text('لوحة تحكم الإدارة'),
-        backgroundColor: const Color(0xFF071A2A),
-        foregroundColor: Colors.white,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: const Color(0xFF071A2A),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Row(
-              children: [
-                CircleAvatar(
-                  radius: 27,
-                  backgroundColor: Color(0xFF16A34A),
-                  child: Icon(
-                    Icons.admin_panel_settings,
-                    color: Colors.white,
-                    size: 30,
-                  ),
-                ),
-                SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'مرحباً، مدير BUKO',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 19,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'مراقبة المنصة وإدارة الإعلانات',
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+  Widget _carCard(int index) {
+    final car = listings[index];
+    final fav = favorites.contains(index);
+    return Card(
+      color: Colors.white,
+      margin: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CarDetailsPage(car: car, favorite: fav, onFavorite: () => setState(() { if (fav) { favorites.remove(index); } else { favorites.add(index); } }))),),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          leading: const CircleAvatar(backgroundColor: Color(0xFFE8F7ED), child: Icon(Icons.directions_car, color: Color(0xFF16A34A))),
+          title: Text(car.name, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+          subtitle: Text('${car.year} • ${car.city}\n${car.price}', style: const TextStyle(color: Colors.black54)),
+          trailing: IconButton(
+            onPressed: () => setState(() { if (fav) { favorites.remove(index); } else { favorites.add(index); } }),
+            icon: Icon(fav ? Icons.favorite : Icons.favorite_border, color: const Color(0xFF16A34A)),
           ),
-          const SizedBox(height: 18),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 1.45,
-            children: [
-              _stat('إعلانات نشطة', active, Icons.directions_car),
-              _stat('بانتظار المراجعة', pending, Icons.pending_actions),
-              _stat('المستخدمون', users, Icons.people_alt_outlined),
-              _stat('بلاغات', reports, Icons.flag_outlined),
-            ],
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'إجراءات سريعة',
-            style: TextStyle(
-              color: Colors.black87,
-              fontSize: 19,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 10),
-          _action(
-            'مراجعة الإعلانات الجديدة',
-            Icons.fact_check_outlined,
-            () {
-              setState(() => pending = 0);
-              _snack('تمت مراجعة الإعلانات المعلقة (وضع تجريبي)');
-            },
-          ),
-          _action(
-            'إدارة المستخدمين',
-            Icons.manage_accounts_outlined,
-            () => _snack('قسم إدارة المستخدمين جاهز للربط بقاعدة البيانات'),
-          ),
-          _action(
-            'البلاغات والشكاوى',
-            Icons.report_problem_outlined,
-            () {
-              setState(() => reports = 0);
-              _snack('تم فتح مركز البلاغات (وضع تجريبي)');
-            },
-          ),
-          _action(
-            'إعدادات المنصة',
-            Icons.settings_outlined,
-            () => _snack('إعدادات المنصة ستكون مرتبطة بالـBackend لاحقاً'),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'ملاحظة: هذه لوحة إدارة واجهة UI حالياً. صلاحيات الإدارة الحقيقية وتخزين البيانات والمصادقة الآمنة تحتاج Backend وقاعدة بيانات.',
-            style: TextStyle(color: Colors.black54, height: 1.5, fontSize: 12),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _stat(String title, int value, IconData icon) {
-    return Card(
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Icon(icon, color: const Color(0xFF16A34A), size: 28),
-            Text(
-              '$value',
-              style: const TextStyle(
-                color: Color(0xFF071A2A),
-                fontSize: 25,
-                fontWeight: FontWeight.w800,
-              ),
+  Widget _section(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(text, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+  );
+
+  Future<void> _showFilters() async {
+    var type = selectedType;
+    var city = selectedCity;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('البحث المتقدم'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            DropdownButtonFormField<String>(
+              value: type,
+              decoration: const InputDecoration(labelText: 'نوع السيارة'),
+              items: const ['الكل', 'سيدان', 'بيك أب', 'دفع رباعي'].map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(),
+              onChanged: (v) => type = v ?? 'الكل',
             ),
-            Text(
-              title,
-              style: const TextStyle(color: Colors.black54, fontSize: 12),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: city,
+              decoration: const InputDecoration(labelText: 'المدينة'),
+              items: const ['الكل', 'الخرطوم', 'بحري', 'أم درمان'].map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(),
+              onChanged: (v) => city = v ?? 'الكل',
             ),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
+            FilledButton(onPressed: () { setState(() { selectedType = type; selectedCity = city; tab = 1; }); Navigator.pop(dialogContext); }, child: const Text('تطبيق')),
           ],
         ),
       ),
     );
   }
 
-  Widget _action(String title, IconData icon, VoidCallback tap) {
-    return Card(
-      color: Colors.white,
-      child: ListTile(
-        onTap: tap,
-        leading: Icon(icon, color: const Color(0xFF16A34A)),
-        title: Text(
-          title,
-          style: const TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        trailing: const Icon(Icons.chevron_left),
-      ),
-    );
-  }
-
-  void _snack(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(text)),
-    );
-  }
+  void _snack(String text) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text), behavior: SnackBarBehavior.floating));
 }
 
-class SimplePage extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String button;
+class Logo extends StatelessWidget {
+  const Logo({super.key});
+  @override
+  Widget build(BuildContext context) => const Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      CircleAvatar(radius: 24, backgroundColor: Color(0xFF16A34A), child: Icon(Icons.directions_car, color: Colors.white)),
+      SizedBox(width: 10),
+      Text('BUKO', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900)),
+    ],
+  );
+}
 
-  const SimplePage(
-    this.title,
-    this.subtitle, {
-    super.key,
-    this.button = '',
-  });
+class CarDetailsPage extends StatelessWidget {
+  final Car car;
+  final bool favorite;
+  final VoidCallback onFavorite;
+  const CarDetailsPage({super.key, required this.car, required this.favorite, required this.onFavorite});
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Card(
-          color: Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.all(28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Logo(),
-                const SizedBox(height: 18),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    height: 1.5,
-                  ),
-                ),
-                if (button.isNotEmpty) ...[
-                  const SizedBox(height: 20),
-                  FilledButton(
-                    onPressed: () {},
-                    child: Text(button),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('تفاصيل السيارة')),
+        body: ListView(padding: const EdgeInsets.all(18), children: [
+          Container(height: 190, decoration: BoxDecoration(color: const Color(0xFF102C40), borderRadius: BorderRadius.circular(24)), child: const Icon(Icons.directions_car, size: 100, color: Color(0xFF39C86A))),
+          const SizedBox(height: 18),
+          Text(car.name, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+          Text(car.price, style: const TextStyle(fontSize: 23, color: Color(0xFF39C86A), fontWeight: FontWeight.bold)),
+          const SizedBox(height: 18),
+          Card(color: Colors.white, child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
+            _info('السنة', car.year), _info('المدينة', car.city), _info('النوع', car.type), _info('الوقود', car.fuel),
+          ]))),
+          const SizedBox(height: 16),
+          FilledButton.icon(onPressed: onFavorite, icon: Icon(favorite ? Icons.favorite : Icons.favorite_border), label: Text(favorite ? 'إزالة من المفضلة' : 'حفظ في المفضلة')),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(onPressed: () => _contact(context), icon: const Icon(Icons.phone), label: const Text('التواصل مع البائع')),
+        ]),
       ),
     );
   }
+
+  Widget _info(String title, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: Row(children: [Expanded(child: Text(title, style: const TextStyle(color: Colors.black54))), Text(value, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold))]),
+  );
+
+  void _contact(BuildContext context) => showDialog<void>(
+    context: context,
+    builder: (_) => const AlertDialog(title: Text('التواصل مع البائع'), content: Text('هذه نسخة أولية من التواصل. سيتم ربط الاتصال والرسائل بخدمة حقيقية عند إضافة الخادم.')),
+  );
+}
+
+class SellPage extends StatefulWidget {
+  final ValueChanged<Car> onAdd;
+  const SellPage({super.key, required this.onAdd});
+  @override
+  State<SellPage> createState() => _SellPageState();
+}
+
+class _SellPageState extends State<SellPage> {
+  final formKey = GlobalKey<FormState>();
+  final name = TextEditingController();
+  final year = TextEditingController(text: '2022');
+  final price = TextEditingController();
+  final city = TextEditingController(text: 'الخرطوم');
+  String type = 'سيدان';
+  String fuel = 'بنزين';
+
+  @override
+  void dispose() { name.dispose(); year.dispose(); price.dispose(); city.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(18), children: [
+    const Text('بيع سيارتك', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+    const SizedBox(height: 6),
+    const Text('أنشئ إعلاناً جديداً في أقل من دقيقة', style: TextStyle(color: Colors.white70)),
+    const SizedBox(height: 20),
+    Form(key: formKey, child: Column(children: [
+      _field(name, 'الماركة والموديل', Icons.directions_car),
+      _field(year, 'سنة الصنع', Icons.calendar_today, keyboard: TextInputType.number),
+      _field(price, 'السعر', Icons.payments_outlined),
+      _field(city, 'المدينة', Icons.location_on_outlined),
+      DropdownButtonFormField<String>(value: type, decoration: const InputDecoration(labelText: 'نوع السيارة'), items: const ['سيدان', 'بيك أب', 'دفع رباعي'].map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(), onChanged: (v) => setState(() => type = v ?? type)),
+      const SizedBox(height: 12),
+      DropdownButtonFormField<String>(value: fuel, decoration: const InputDecoration(labelText: 'نوع الوقود'), items: const ['بنزين', 'ديزل', 'كهرباء', 'هجين'].map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(), onChanged: (v) => setState(() => fuel = v ?? fuel)),
+      const SizedBox(height: 22),
+      SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: _publish, icon: const Icon(Icons.publish), label: const Padding(padding: EdgeInsets.all(12), child: Text('نشر الإعلان')))),
+    ])),
+  ]);
+
+  Widget _field(TextEditingController controller, String label, IconData icon, {TextInputType? keyboard}) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: TextFormField(controller: controller, keyboardType: keyboard, validator: (v) => (v == null || v.trim().isEmpty) ? 'هذا الحقل مطلوب' : null, decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon))),
+  );
+
+  void _publish() {
+    if (!formKey.currentState!.validate()) return;
+    widget.onAdd(Car(name.text.trim(), year.text.trim(), '${price.text.trim()} ج.س', city.text.trim(), type, fuel));
+    name.clear(); price.clear();
+  }
+}
+
+class AccountPage extends StatelessWidget {
+  const AccountPage({super.key});
+  @override
+  Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(20), children: [
+    const Logo(), const SizedBox(height: 18),
+    const Text('حسابي', textAlign: TextAlign.center, style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
+    const SizedBox(height: 8),
+    const Text('إدارة إعلاناتك ومفضلاتك وإعدادات الحساب', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)),
+    const SizedBox(height: 25),
+    _tile(context, Icons.person_outline, 'تسجيل الدخول', 'الوصول إلى حسابك وإعلاناتك', () => _login(context)),
+    _tile(context, Icons.favorite_border, 'المفضلة', 'السيارات التي حفظتها', () => Navigator.popUntil(context, (route) => route.isFirst)),
+    _tile(context, Icons.admin_panel_settings_outlined, 'لوحة تحكم الإدارة', 'إدارة الإعلانات والمستخدمين والإحصائيات', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminDashboardPage()))),
+    _tile(context, Icons.settings_outlined, 'الإعدادات', 'إشعارات وخصوصية وتفضيلات التطبيق', () => _settings(context)),
+  ]);
+
+  Widget _tile(BuildContext context, IconData icon, String title, String sub, VoidCallback tap) => Card(color: Colors.white, child: ListTile(onTap: tap, leading: CircleAvatar(backgroundColor: const Color(0xFFE8F7ED), child: Icon(icon, color: const Color(0xFF16A34A))), title: Text(title, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)), subtitle: Text(sub, style: const TextStyle(color: Colors.black54)), trailing: const Icon(Icons.chevron_left, color: Colors.black54)));
+
+  void _login(BuildContext context) => showDialog<void>(context: context, builder: (_) => AlertDialog(title: const Text('تسجيل الدخول'), content: const Column(mainAxisSize: MainAxisSize.min, children: [TextField(decoration: InputDecoration(labelText: 'البريد الإلكتروني')), TextField(obscureText: true, decoration: InputDecoration(labelText: 'كلمة المرور'))]), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')), FilledButton(onPressed: () { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تسجيل الدخول تجريبياً'))); }, child: const Text('دخول'))]));
+
+  void _settings(BuildContext context) => showDialog<void>(context: context, builder: (_) => AlertDialog(title: const Text('الإعدادات'), content: const Column(mainAxisSize: MainAxisSize.min, children: [SwitchListTile(value: true, onChanged: null, title: Text('إشعارات الإعلانات')), SwitchListTile(value: true, onChanged: null, title: Text('حفظ تفضيلات البحث'))]), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('تم'))]));
+}
+
+class AdminDashboardPage extends StatefulWidget {
+  const AdminDashboardPage({super.key});
+  @override
+  State<AdminDashboardPage> createState() => _AdminDashboardPageState();
+}
+
+class _AdminDashboardPageState extends State<AdminDashboardPage> {
+  int pending = 7, active = 124, users = 86, reports = 3;
+
+  @override
+  Widget build(BuildContext context) => Directionality(textDirection: TextDirection.rtl, child: Scaffold(
+    backgroundColor: const Color(0xFFF4F7F8),
+    appBar: AppBar(title: const Text('لوحة تحكم الإدارة'), backgroundColor: const Color(0xFF071A2A), foregroundColor: Colors.white),
+    body: ListView(padding: const EdgeInsets.all(16), children: [
+      Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(color: const Color(0xFF071A2A), borderRadius: BorderRadius.circular(20)), child: const Row(children: [CircleAvatar(radius: 27, backgroundColor: Color(0xFF16A34A), child: Icon(Icons.admin_panel_settings, color: Colors.white, size: 30)), SizedBox(width: 14), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('مرحباً، مدير BUKO', style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.bold)), SizedBox(height: 4), Text('مراقبة المنصة وإدارة الإعلانات', style: TextStyle(color: Colors.white70))]))])),
+      const SizedBox(height: 18),
+      GridView.count(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 1.45, children: [
+        _stat('إعلانات نشطة', active, Icons.directions_car, () => _snack('لديك $active إعلاناً نشطاً')),
+        _stat('بانتظار المراجعة', pending, Icons.pending_actions, () => _review()),
+        _stat('المستخدمون', users, Icons.people_alt_outlined, () => _snack('إجمالي المستخدمين: $users')),
+        _stat('بلاغات', reports, Icons.flag_outlined, () => _reports()),
+      ]),
+      const SizedBox(height: 20),
+      const Text('إجراءات سريعة', style: TextStyle(color: Colors.black87, fontSize: 19, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 10),
+      _action('مراجعة الإعلانات الجديدة', Icons.fact_check_outlined, _review),
+      _action('إدارة المستخدمين', Icons.manage_accounts_outlined, () => _users()),
+      _action('البلاغات والشكاوى', Icons.warning_amber_outlined, _reports),
+      _action('إعدادات المنصة', Icons.settings_outlined, () => _platform()),
+      const SizedBox(height: 14),
+      const Text('ملاحظة: البيانات الحالية محلية للنسخة التجريبية. ربط قاعدة البيانات والمصادقة والخادم هو المرحلة التالية.', style: TextStyle(color: Colors.black54)),
+    ]),
+  ));
+
+  Widget _stat(String title, int value, IconData icon, VoidCallback tap) => Card(color: Colors.white, child: InkWell(onTap: tap, borderRadius: BorderRadius.circular(12), child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, color: const Color(0xFF16A34A), size: 30), const Spacer(), Text('$value', style: const TextStyle(color: Color(0xFF071A2A), fontSize: 42)), Text(title, style: const TextStyle(color: Colors.black54, fontSize: 15))]))));
+
+  Widget _action(String title, IconData icon, VoidCallback tap) => Card(color: Colors.white, margin: const EdgeInsets.only(bottom: 10), child: ListTile(onTap: tap, leading: Icon(icon, color: const Color(0xFF16A34A), size: 30), title: Text(title, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)), trailing: const Icon(Icons.chevron_left, color: Colors.black38)));
+
+  void _review() => setState(() { pending = 0; active += 7; _snack('تمت مراجعة الإعلانات المعلقة'); });
+  void _users() => showDialog<void>(context: context, builder: (_) => AlertDialog(title: const Text('إدارة المستخدمين'), content: Text('يوجد حالياً $users مستخدماً مسجلاً في البيانات المحلية.'), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق'))]));
+  void _reports() => showDialog<void>(context: context, builder: (_) => AlertDialog(title: const Text('البلاغات والشكاوى'), content: Text('يوجد $reports بلاغات تحتاج إلى مراجعة.'), actions: [TextButton(onPressed: () { setState(() => reports = 0); Navigator.pop(context); _snack('تمت معالجة البلاغات'); }, child: const Text('معالجة الكل')), TextButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق'))]));
+  void _platform() => showDialog<void>(context: context, builder: (_) => const AlertDialog(title: Text('إعدادات المنصة'), content: Text('من هنا سيتم التحكم في إعدادات السوق والإعلانات والإشعارات عند ربط الخادم.')));
+  void _snack(String text) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text), behavior: SnackBarBehavior.floating));
 }

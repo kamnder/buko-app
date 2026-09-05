@@ -1,46 +1,609 @@
-import 'dart:io';
 import 'dart:math' as math;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'firebase_options.dart';
+
 import 'admin_page.dart';
+import 'firebase_options.dart';
 import 'phone_password_auth_page.dart';
 import 'services/firebase_service.dart' as buko_service;
 
-const gold=Color(0xFFFFB51B), ink=Color(0xFF080B10), panel=Color(0xFF11161E), muted=Color(0xFF9BA6B5);
+const gold = Color(0xFFFFB51B);
+const ink = Color(0xFF080B10);
+const panel = Color(0xFF11161E);
+const muted = Color(0xFF9BA6B5);
 
-Future<void> main() async { WidgetsFlutterBinding.ensureInitialized(); await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform); runApp(const BukoApp()); }
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  runApp(const BukoApp());
+}
 
-class BukoApp extends StatelessWidget { const BukoApp({super.key}); @override Widget build(BuildContext c)=>MaterialApp(debugShowCheckedModeBanner:false,title:'BUKO',theme:ThemeData(useMaterial3:true,brightness:Brightness.dark,scaffoldBackgroundColor:ink,colorScheme:ColorScheme.fromSeed(seedColor:gold,brightness:Brightness.dark),cardTheme:const CardThemeData(color:panel,elevation:0),inputDecorationTheme:InputDecorationTheme(filled:true,fillColor:panel,labelStyle:const TextStyle(color:muted),hintStyle:const TextStyle(color:muted),prefixIconColor:gold,border:OutlineInputBorder(borderRadius:BorderRadius.all(Radius.circular(18)),borderSide:BorderSide.none),enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.all(Radius.circular(18)),borderSide:BorderSide(color:Colors.white10)),focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.all(Radius.circular(18)),borderSide:BorderSide(color:gold)))),home:const AuthGate()); }
-class AuthGate extends StatelessWidget { const AuthGate({super.key}); @override Widget build(BuildContext c)=>StreamBuilder<auth.User?>(stream:buko_service.FirebaseService.instance.authState,builder:(_,s)=>s.data==null?const PhonePasswordAuthPage():const HomeShell()); }
+class BukoApp extends StatelessWidget {
+  const BukoApp({super.key});
 
-class HomeShell extends StatefulWidget { const HomeShell({super.key}); @override State<HomeShell> createState()=>_HomeShellState(); }
-class _HomeShellState extends State<HomeShell>{int tab=0; @override Widget build(BuildContext c){final pages=[const HomePage(),const ExplorePage(),const SellPage(),const FavoritesPage(),const AccountPage()];return Directionality(textDirection:TextDirection.rtl,child:Scaffold(body:SafeArea(child:AnimatedSwitcher(duration:const Duration(milliseconds:250),child:pages[tab])),bottomNavigationBar:NavigationBar(backgroundColor:const Color(0xFF0C1016),indicatorColor:gold.withOpacity(.16),selectedIndex:tab,onDestinationSelected:(i)=>setState(()=>tab=i),destinations:const[NavigationDestination(icon:Icon(Icons.home_outlined),selectedIcon:Icon(Icons.home,color:gold),label:'الرئيسية'),NavigationDestination(icon:Icon(Icons.search),selectedIcon:Icon(Icons.search,color:gold),label:'استكشاف'),NavigationDestination(icon:Icon(Icons.add_circle_outline),selectedIcon:Icon(Icons.add_circle,color:gold),label:'بيع'),NavigationDestination(icon:Icon(Icons.favorite_border),selectedIcon:Icon(Icons.favorite,color:gold),label:'المفضلة'),NavigationDestination(icon:Icon(Icons.person_outline),selectedIcon:Icon(Icons.person,color:gold),label:'حسابي')]));}}
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'BUKO',
+      theme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: ink,
+        colorScheme: ColorScheme.fromSeed(seedColor: gold, brightness: Brightness.dark),
+        cardTheme: const CardThemeData(color: panel, elevation: 0),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: panel,
+          prefixIconColor: gold,
+          hintStyle: const TextStyle(color: muted),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: Colors.white10)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: gold)),
+        ),
+      ),
+      home: const AuthGate(),
+    );
+  }
+}
 
-class HomePage extends StatelessWidget{const HomePage({super.key});@override Widget build(BuildContext c)=>StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:buko_service.FirebaseService.instance.watchCars(),builder:(_,s){final docs=s.data?.docs??[];return ListView(padding:const EdgeInsets.fromLTRB(16,12,16,28),children:[const _TopBar(),const SizedBox(height:14),const AnimatedMarketHero(),const SizedBox(height:18),const Text('ماذا تبحث اليوم؟',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900)),const SizedBox(height:10),const _SearchBox(),const SizedBox(height:18),const _Title('تصفح حسب النوع'),const SizedBox(height:10),const SizedBox(height:92,child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[_Cat(Icons.directions_car_filled,'سيدان'),_Cat(Icons.directions_car,'دفع رباعي'),_Cat(Icons.local_shipping,'بيك أب'),_Cat(Icons.directions_bus,'باص')]))),const SizedBox(height:18),const _Title('أحدث السيارات'),const SizedBox(height:10),if(s.hasError)const _Info('تعذر تحميل السيارات حالياً.'),if(docs.isEmpty&&!s.hasError)const _Info('لا توجد إعلانات منشورة بعد. كن أول من يضيف سيارة!'),...docs.map((d)=>CarCard(data:d.data(),id:d.id))]);});}
-class _TopBar extends StatelessWidget{const _TopBar();@override Widget build(BuildContext c)=>Row(children:[Container(width:48,height:48,decoration:BoxDecoration(color:gold,borderRadius:BorderRadius.circular(15)),child:const Icon(Icons.key,color:Colors.black,size:28)),const SizedBox(width:12),const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('BUKO',style:TextStyle(fontSize:23,fontWeight:FontWeight.w900,letterSpacing:1.2)),Text('سيارات مستعملة بثقة وسهولة',style:TextStyle(fontSize:12,color:muted))])),IconButton(onPressed:(){},icon:const Icon(Icons.notifications_none_rounded))]);}
-class _SearchBox extends StatelessWidget{const _SearchBox();@override Widget build(BuildContext c)=>Container(height:58,padding:const EdgeInsets.symmetric(horizontal:16),decoration:BoxDecoration(color:panel,borderRadius:BorderRadius.circular(18),border:Border.all(color:Colors.white10)),child:const Row(children:[Icon(Icons.search,color:gold),SizedBox(width:12),Expanded(child:Text('ابحث عن ماركة، موديل أو مدينة',style:TextStyle(color:muted))),Icon(Icons.tune_rounded,color:Colors.white70)]));}
-class _Title extends StatelessWidget{final String t;const _Title(this.t);@override Widget build(BuildContext c)=>Row(children:[Expanded(child:Text(t,style:const TextStyle(fontSize:18,fontWeight:FontWeight.w800))),const Text('عرض الكل',style:TextStyle(color:gold,fontSize:12,fontWeight:FontWeight.w700))]);}
-class _Cat extends StatelessWidget{final IconData i;final String t;const _Cat(this.i,this.t);@override Widget build(BuildContext c)=>Container(width:105,margin:const EdgeInsets.only(left:10),decoration:BoxDecoration(color:panel,borderRadius:BorderRadius.circular(18),border:Border.all(color:Colors.white10)),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(i,color:gold,size:28),const SizedBox(height:7),Text(t,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700))]));}
-class _Info extends StatelessWidget{final String t;const _Info(this.t);@override Widget build(BuildContext c)=>Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(color:panel,borderRadius:BorderRadius.circular(20)),child:Text(t,textAlign:TextAlign.center,style:const TextStyle(color:muted)));}
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
 
-class AnimatedMarketHero extends StatefulWidget{const AnimatedMarketHero({super.key});@override State<AnimatedMarketHero> createState()=>_AnimatedMarketHeroState();}
-class _AnimatedMarketHeroState extends State<AnimatedMarketHero> with SingleTickerProviderStateMixin{late final a=AnimationController(vsync:this,duration:const Duration(seconds:7))..repeat();@override void dispose(){a.dispose();super.dispose();}@override Widget build(BuildContext c)=>ClipRRect(borderRadius:BorderRadius.circular(28),child:SizedBox(height:285,child:Stack(fit:StackFit.expand,children:[AnimatedBuilder(animation:a,builder:(_,__)=>CustomPaint(painter:_ScenePainter(a.value))),Positioned.fill(child:DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Colors.transparent,Colors.black.withOpacity(.84)])))),const Positioned(top:18,right:18,child:_Pill()),const Positioned(right:18,left:18,bottom:18,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('عربيتك الجاية\nيمكن تكون هنا',style:TextStyle(fontSize:28,height:1.02,fontWeight:FontWeight.w900)),SizedBox(height:6),Text('ابحث • قارن • تواصل مباشرة مع المالك',style:TextStyle(color:Colors.white70,fontSize:13))]))])));}
-class _Pill extends StatelessWidget{const _Pill();@override Widget build(BuildContext c)=>Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),decoration:BoxDecoration(color:Colors.black54,borderRadius:BorderRadius.circular(30),border:Border.all(color:Colors.white24)),child:const Text('من السودان للسودان 🇸🇩',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700)));}
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<auth.User?>(
+      stream: buko_service.FirebaseService.instance.authState,
+      builder: (context, snapshot) => snapshot.data == null ? const PhonePasswordAuthPage() : const HomeShell(),
+    );
+  }
+}
 
-class _ScenePainter extends CustomPainter{final double t;_ScenePainter(this.t);@override void paint(Canvas c,Size s){final w=s.width,h=s.height;final bg=Paint()..shader=const LinearGradient(colors:[Color(0xFF25364A),Color(0xFFB96D39),Color(0xFF10151A)]).createShader(Offset.zero&s);c.drawRect(Offset.zero&s,bg);c.drawCircle(Offset(w*.78,h*.24),34,Paint()..color=gold.withOpacity(.55));final city=Paint()..color=const Color(0xFF0C1218).withOpacity(.72);for(var i=0;i<10;i++){final bh=34+(i%4)*15;c.drawRect(Rect.fromLTWH(i*w/9-5,h*.55-bh,18+(i%3)*9,bh),city);}final road=Paint()..color=const Color(0xFF080B0E);c.drawPath(Path()..moveTo(0,h*.61)..lineTo(w,h*.56)..lineTo(w,h)..lineTo(0,h)..close(),road);final lane=Paint()..color=Colors.white12..strokeWidth=3;for(var i=-1;i<7;i++){final x=(i*85+t*170)%(w+100)-50;c.drawLine(Offset(x,h*.88),Offset(x+34,h*.76),lane);}car(c,Offset(w*.18+math.sin(t*math.pi*2)*8,h*.69),.9,false);car(c,Offset(w*.58+math.sin(t*math.pi*2+2)*10,h*.63),.75,false);car(c,Offset(w*.82+math.sin(t*math.pi*2+4)*12,h*.77),.6,false);car(c,Offset(w*.36,h*.83),1.28,true);}
-void car(Canvas c,Offset p,double z,bool hero){final body=Paint()..color=hero?const Color(0xFFE7E9ED):const Color(0xFF27313B),glass=Paint()..color=const Color(0xFF17212B),wheel=Paint()..color=Colors.black,trim=Paint()..color=hero?gold:Colors.white24; c.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(p.dx-62*z,p.dy-22*z,124*z,38*z),Radius.circular(13*z)),body);c.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(p.dx-35*z,p.dy-38*z,65*z,28*z),Radius.circular(12*z)),glass);c.drawCircle(Offset(p.dx-40*z,p.dy+17*z),12*z,wheel);c.drawCircle(Offset(p.dx+40*z,p.dy+17*z),12*z,wheel);c.drawLine(Offset(p.dx-48*z,p.dy-2*z),Offset(p.dx+48*z,p.dy-2*z),trim..strokeWidth=3*z);if(hero){final skin=Paint()..color=const Color(0xFF70462F),cloth=Paint()..color=Colors.white;c.drawCircle(Offset(p.dx+2*z,p.dy-47*z),14*z,skin);c.drawOval(Rect.fromCenter(center:Offset(p.dx+2*z,p.dy-58*z),width:34*z,height:18*z),cloth);c.drawOval(Rect.fromCenter(center:Offset(p.dx-4*z,p.dy-62*z),width:27*z,height:11*z),cloth);c.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(p.dx-18*z,p.dy-35*z,34*z,36*z),Radius.circular(12*z)),cloth);c.drawLine(Offset(p.dx+16*z,p.dy-20*z),Offset(p.dx+38*z,p.dy-42*z),skin..strokeWidth=8*z);c.drawCircle(Offset(p.dx+39*z,p.dy-43*z),6*z,skin);}}@override bool shouldRepaint(covariant _ScenePainter o)=>o.t!=t;}
+class HomeShell extends StatefulWidget {
+  const HomeShell({super.key});
 
-class ExplorePage extends StatefulWidget{const ExplorePage({super.key});@override State<ExplorePage> createState()=>_ExplorePageState();}
-class _ExplorePageState extends State<ExplorePage>{String q='';@override Widget build(BuildContext c)=>StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream:buko_service.FirebaseService.instance.watchCars(),builder:(_,s){final docs=(s.data?.docs??[]).where((d){final x=d.data();return q.isEmpty||'${x['name']} ${x['city']} ${x['type']}'.toLowerCase().contains(q.toLowerCase());}).toList();return ListView(padding:const EdgeInsets.all(16),children:[const Text('استكشاف السيارات',style:TextStyle(fontSize:27,fontWeight:FontWeight.w900)),const SizedBox(height:6),const Text('اختار عربيتك من الإعلانات الموثوقة',style:TextStyle(color:muted)),const SizedBox(height:16),TextField(onChanged:(v)=>setState(()=>q=v),decoration:const InputDecoration(hintText:'الماركة أو المدينة أو النوع',prefixIcon:Icon(Icons.search))),const SizedBox(height:16),...docs.map((d)=>CarCard(data:d.data(),id:d.id))]);});}}
+  @override
+  State<HomeShell> createState() => _HomeShellState();
+}
 
-class CarCard extends StatelessWidget{final Map<String,dynamic> data;final String id;const CarCard({super.key,required this.data,required this.id});@override Widget build(BuildContext c){final images=List<String>.from(data['imageUrls']??const[]);return Container(margin:const EdgeInsets.only(bottom:12),decoration:BoxDecoration(color:panel,borderRadius:BorderRadius.circular(20),border:Border.all(color:Colors.white10)),child:ListTile(contentPadding:const EdgeInsets.all(9),leading:ClipRRect(borderRadius:BorderRadius.circular(14),child:images.isEmpty?Container(width:76,height:76,color:const Color(0xFF1B222C),child:const Icon(Icons.directions_car,color:gold,size:30)):Image.network(images.first,width:76,height:76,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Container(width:76,height:76,color:const Color(0xFF1B222C),child:const Icon(Icons.directions_car,color:gold)))),title:Text('${data['name']??'سيارة'} • ${data['year']??''}',style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Padding(padding:const EdgeInsets.only(top:5),child:Text('${data['price']??''} • ${data['city']??''}\n${data['type']??''}',style:const TextStyle(color:muted,height:1.45))),trailing:IconButton(style:IconButton.styleFrom(backgroundColor:gold.withOpacity(.12)),icon:const Icon(Icons.shopping_bag_outlined,color:gold),onPressed:()async{final seller=data['sellerId'];if(seller==null)return;try{await buko_service.FirebaseService.instance.createPurchaseRequest(carId:id,sellerId:seller);if(c.mounted)ScaffoldMessenger.of(c).showSnackBar(const SnackBar(content:Text('تم إرسال طلب الشراء ✓')));}catch(e){if(c.mounted)ScaffoldMessenger.of(c).showSnackBar(SnackBar(content:Text('تعذر إرسال الطلب: $e')));}})));}}
+class _HomeShellState extends State<HomeShell> {
+  int tab = 0;
 
-class SellPage extends StatefulWidget{const SellPage({super.key});@override State<SellPage> createState()=>_SellPageState();}
-class _SellPageState extends State<SellPage>{final name=TextEditingController(),year=TextEditingController(),price=TextEditingController(),city=TextEditingController();final picker=ImagePicker();String type='سيدان';bool loading=false,picking=false;final List<XFile> imgs=[];@override void dispose(){name.dispose();year.dispose();price.dispose();city.dispose();super.dispose();}Future<void> pick()async{if(picking)return;setState(()=>picking=true);try{final x=await picker.pickMultiImage(imageQuality:82,maxWidth:1600);if(!mounted)return;setState(()=>imgs.addAll(x.where((e)=>imgs.length<8&&!imgs.any((a)=>a.path==e.path))));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر اختيار الصور: $e')));}finally{if(mounted)setState(()=>picking=false);}}Future<List<String>> upload()async{final u=<String>[];for(var i=0;i<imgs.length;i++){u.add(await buko_service.FirebaseService.instance.uploadCarImage(await imgs[i].readAsBytes(),'${DateTime.now().millisecondsSinceEpoch}_$i.jpg'));}return u;}Future<void> submit()async{if(name.text.trim().isEmpty||int.tryParse(year.text)==null||price.text.trim().isEmpty||city.text.trim().isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('أكمل بيانات السيارة أولاً')));return;}if(imgs.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('أضف صورة واحدة على الأقل للسيارة')));return;}setState(()=>loading=true);try{await buko_service.FirebaseService.instance.submitCar(name:name.text,year:int.parse(year.text),price:price.text,city:city.text,type:type,imageUrls:await upload());if(mounted){name.clear();year.clear();price.clear();city.clear();setState(()=>imgs.clear());ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تم حفظ الإعلان للمراجعة ✓')));}}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر نشر الإعلان: $e')));}finally{if(mounted)setState(()=>loading=false);}}@override Widget build(BuildContext c)=>ListView(padding:const EdgeInsets.all(16),children:[const Text('بيع سيارتك',style:TextStyle(fontSize:28,fontWeight:FontWeight.w900)),const SizedBox(height:5),const Text('اعرض سيارتك للمراجعة ثم تصل للمشترين',style:TextStyle(color:muted)),const SizedBox(height:18),TextField(controller:name,decoration:const InputDecoration(labelText:'الماركة والموديل',prefixIcon:Icon(Icons.directions_car_outlined))),const SizedBox(height:10),Row(children:[Expanded(child:TextField(controller:year,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'سنة الصنع'))),const SizedBox(width:10),Expanded(child:TextField(controller:price,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'السعر')))]),const SizedBox(height:10),Row(children:[Expanded(child:TextField(controller:city,decoration:const InputDecoration(labelText:'المدينة',prefixIcon:Icon(Icons.location_on_outlined)))),const SizedBox(width:10),Expanded(child:DropdownButtonFormField<String>(initialValue:type,items:const['سيدان','دفع رباعي','هاتشباك','بيك أب','باص'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>type=v??type),decoration:const InputDecoration(labelText:'النوع')))]),const SizedBox(height:18),OutlinedButton.icon(onPressed:picking?null:pick,icon:const Icon(Icons.photo_library_outlined,color:gold),label:Text(picking?'جارٍ اختيار الصور...':'إضافة صور (حتى 8)')),if(imgs.isNotEmpty)...[const SizedBox(height:12),SizedBox(height:100,child:ListView.separated(scrollDirection:Axis.horizontal,itemCount:imgs.length,separatorBuilder:(_,__)=>const SizedBox(width:8),itemBuilder:(_,i)=>ClipRRect(borderRadius:BorderRadius.circular(14),child:Image.file(File(imgs[i].path),width:100,height:100,fit:BoxFit.cover))))],const SizedBox(height:20),SizedBox(height:56,child:FilledButton.icon(onPressed:loading?null:submit,style:FilledButton.styleFrom(backgroundColor:gold,foregroundColor:Colors.black,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18))),icon:const Icon(Icons.publish),label:Text(loading?'جارٍ رفع الإعلان...':'نشر الإعلان للمراجعة',style:const TextStyle(fontWeight:FontWeight.w900))))]);}
+  @override
+  Widget build(BuildContext context) {
+    const pages = <Widget>[
+      HomePage(),
+      ExplorePage(),
+      SellPage(),
+      FavoritesPage(),
+      AccountPage(),
+    ];
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        body: SafeArea(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 280),
+            child: KeyedSubtree(key: ValueKey(tab), child: pages[tab]),
+          ),
+        ),
+        bottomNavigationBar: NavigationBar(
+          backgroundColor: const Color(0xFF0C1016),
+          indicatorColor: gold.withOpacity(.16),
+          selectedIndex: tab,
+          onDestinationSelected: (index) => setState(() => tab = index),
+          destinations: const [
+            NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home, color: gold), label: 'الرئيسية'),
+            NavigationDestination(icon: Icon(Icons.search), selectedIcon: Icon(Icons.search, color: gold), label: 'استكشاف'),
+            NavigationDestination(icon: Icon(Icons.add_circle_outline), selectedIcon: Icon(Icons.add_circle, color: gold), label: 'بيع'),
+            NavigationDestination(icon: Icon(Icons.favorite_border), selectedIcon: Icon(Icons.favorite, color: gold), label: 'المفضلة'),
+            NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person, color: gold), label: 'حسابي'),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-class FavoritesPage extends StatelessWidget{const FavoritesPage({super.key});@override Widget build(BuildContext c)=>const Center(child:Column(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.favorite_border,color:gold,size:60),SizedBox(height:12),Text('المفضلة',style:TextStyle(fontSize:24,fontWeight:FontWeight.w900)),SizedBox(height:6),Text('السيارات التي تعجبك ستظهر هنا',style:TextStyle(color:muted))]));}
-class AccountPage extends StatelessWidget{const AccountPage({super.key});Future<bool> admin()async{final u=auth.FirebaseAuth.instance.currentUser;if(u==null)return false;final r=await u.getIdTokenResult();return r.claims?['admin']==true;}@override Widget build(BuildContext c)=>FutureBuilder<bool>(future:admin(),builder:(_,s)=>ListView(padding:const EdgeInsets.all(16),children:[const SizedBox(height:12),Container(padding:const EdgeInsets.all(22),decoration:BoxDecoration(color:panel,borderRadius:BorderRadius.circular(24)),child:const Column(children:[CircleAvatar(radius:34,backgroundColor:Color(0xFF2A2211),child:Icon(Icons.person,color:gold,size:34)),SizedBox(height:12),Text('حساب BUKO',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),SizedBox(height:4),Text('إدارة حسابك وإعلاناتك',style:TextStyle(color:muted))])),const SizedBox(height:14),if(s.data==true)...[SizedBox(height:54,child:FilledButton.icon(onPressed:()=>Navigator.of(c).push(MaterialPageRoute(builder:(_)=>const AdminPage())),style:FilledButton.styleFrom(backgroundColor:gold,foregroundColor:Colors.black),icon:const Icon(Icons.admin_panel_settings),label:const Text('لوحة تحكم الإدارة',style:TextStyle(fontWeight:FontWeight.w900)))),const SizedBox(height:10)],SizedBox(height:54,child:OutlinedButton.icon(onPressed:()=>buko_service.FirebaseService.instance.signOut(),icon:const Icon(Icons.logout),label:const Text('تسجيل الخروج')))]));}
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: buko_service.FirebaseService.instance.watchCars(),
+      builder: (context, snapshot) {
+        final docs = snapshot.data?.docs ?? const [];
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+          children: [
+            const _TopBar(),
+            const SizedBox(height: 14),
+            const AnimatedMarketHero(),
+            const SizedBox(height: 20),
+            const Text('ماذا تبحث اليوم؟', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 10),
+            const _SearchBox(),
+            const SizedBox(height: 20),
+            const _SectionTitle('تصفح حسب النوع'),
+            const SizedBox(height: 10),
+            const SizedBox(
+              height: 94,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(children: [
+                  _Cat(Icons.directions_car_filled, 'سيدان'),
+                  _Cat(Icons.directions_car, 'دفع رباعي'),
+                  _Cat(Icons.local_shipping, 'بيك أب'),
+                  _Cat(Icons.directions_bus, 'باص'),
+                ]),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const _SectionTitle('أحدث السيارات'),
+            const SizedBox(height: 10),
+            if (snapshot.hasError) const _Info('تعذر تحميل السيارات حالياً.'),
+            if (docs.isEmpty && !snapshot.hasError) const _Info('لا توجد إعلانات منشورة بعد. كن أول من يضيف سيارة!'),
+            ...docs.map((doc) => CarCard(data: doc.data(), id: doc.id)),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _TopBar extends StatelessWidget {
+  const _TopBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(color: gold, borderRadius: BorderRadius.circular(16)),
+          child: const Icon(Icons.key, color: Colors.black, size: 28),
+        ),
+        const SizedBox(width: 12),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('BUKO', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1.3)),
+              Text('سيارات مستعملة بثقة وسهولة', style: TextStyle(fontSize: 12, color: muted)),
+            ],
+          ),
+        ),
+        IconButton(onPressed: null, icon: Icon(Icons.notifications_none_rounded)),
+      ],
+    );
+  }
+}
+
+class _SearchBox extends StatelessWidget {
+  const _SearchBox();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 58,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)),
+      child: const Row(
+        children: [
+          Icon(Icons.search, color: gold),
+          SizedBox(width: 12),
+          Expanded(child: Text('ابحث عن ماركة، موديل أو مدينة', style: TextStyle(color: muted))),
+          Icon(Icons.tune_rounded, color: Colors.white70),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  const _SectionTitle(this.title);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
+        const Text('عرض الكل', style: TextStyle(color: gold, fontSize: 12, fontWeight: FontWeight.w700)),
+      ],
+    );
+  }
+}
+
+class _Cat extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  const _Cat(this.icon, this.title);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 108,
+      margin: const EdgeInsets.only(left: 10),
+      decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [Icon(icon, color: gold, size: 28), const SizedBox(height: 7), Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))],
+      ),
+    );
+  }
+}
+
+class _Info extends StatelessWidget {
+  final String text;
+  const _Info(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(20)),
+      child: Text(text, textAlign: TextAlign.center, style: const TextStyle(color: muted)),
+    );
+  }
+}
+
+class AnimatedMarketHero extends StatefulWidget {
+  const AnimatedMarketHero({super.key});
+
+  @override
+  State<AnimatedMarketHero> createState() => _AnimatedMarketHeroState();
+}
+
+class _AnimatedMarketHeroState extends State<AnimatedMarketHero> with SingleTickerProviderStateMixin {
+  late final AnimationController controller = AnimationController(vsync: this, duration: const Duration(seconds: 7))..repeat();
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(28),
+      child: SizedBox(
+        height: 285,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            AnimatedBuilder(animation: controller, builder: (_, __) => CustomPaint(painter: _ScenePainter(controller.value))),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Color(0xD9000000)]),
+              ),
+            ),
+            const Positioned(top: 18, right: 18, child: _Pill()),
+            const Positioned(
+              right: 18,
+              left: 18,
+              bottom: 18,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('عربيتك الجاية\nيمكن تكون هنا', style: TextStyle(fontSize: 28, height: 1.02, fontWeight: FontWeight.w900)),
+                  SizedBox(height: 6),
+                  Text('ابحث • قارن • تواصل مباشرة مع المالك', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(30), border: Border.all(color: Colors.white24)),
+      child: const Text('من السودان للسودان 🇸🇩', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+    );
+  }
+}
+
+class _ScenePainter extends CustomPainter {
+  final double t;
+  _ScenePainter(this.t);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final bg = Paint()
+      ..shader = const LinearGradient(colors: [Color(0xFF203447), Color(0xFFB96D39), Color(0xFF10151A)]).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, bg);
+    canvas.drawCircle(Offset(w * .78, h * .23), 34, Paint()..color = gold.withOpacity(.55));
+
+    final city = Paint()..color = const Color(0xFF0C1218).withOpacity(.72);
+    for (var i = 0; i < 10; i++) {
+      final buildingHeight = 34.0 + (i % 4) * 15.0;
+      canvas.drawRect(Rect.fromLTWH(i * w / 9 - 5, h * .55 - buildingHeight, 18 + (i % 3) * 9.0, buildingHeight), city);
+    }
+
+    final road = Paint()..color = const Color(0xFF080B0E);
+    final roadPath = Path()
+      ..moveTo(0, h * .61)
+      ..lineTo(w, h * .56)
+      ..lineTo(w, h)
+      ..lineTo(0, h)
+      ..close();
+    canvas.drawPath(roadPath, road);
+
+    final lane = Paint()..color = Colors.white12..strokeWidth = 3;
+    for (var i = -1; i < 7; i++) {
+      final x = (i * 85 + t * 170) % (w + 100) - 50;
+      canvas.drawLine(Offset(x, h * .88), Offset(x + 34, h * .76), lane);
+    }
+
+    _drawCar(canvas, Offset(w * .18 + math.sin(t * math.pi * 2) * 8, h * .69), .9, false);
+    _drawCar(canvas, Offset(w * .58 + math.sin(t * math.pi * 2 + 2) * 10, h * .63), .75, false);
+    _drawCar(canvas, Offset(w * .82 + math.sin(t * math.pi * 2 + 4) * 12, h * .77), .6, false);
+    _drawCar(canvas, Offset(w * .36, h * .83), 1.28, true);
+  }
+
+  void _drawCar(Canvas canvas, Offset p, double z, bool hero) {
+    final body = Paint()..color = hero ? const Color(0xFFE7E9ED) : const Color(0xFF27313B);
+    final glass = Paint()..color = const Color(0xFF17212B);
+    final wheel = Paint()..color = Colors.black;
+    final trim = Paint()..color = hero ? gold : Colors.white24;
+
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(p.dx - 62 * z, p.dy - 22 * z, 124 * z, 38 * z), Radius.circular(13 * z)), body);
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(p.dx - 35 * z, p.dy - 38 * z, 65 * z, 28 * z), Radius.circular(12 * z)), glass);
+    canvas.drawCircle(Offset(p.dx - 40 * z, p.dy + 17 * z), 12 * z, wheel);
+    canvas.drawCircle(Offset(p.dx + 40 * z, p.dy + 17 * z), 12 * z, wheel);
+    canvas.drawLine(Offset(p.dx - 48 * z, p.dy - 2 * z), Offset(p.dx + 48 * z, p.dy - 2 * z), trim..strokeWidth = 3 * z);
+
+    if (hero) {
+      final skin = Paint()..color = const Color(0xFF70462F);
+      final cloth = Paint()..color = Colors.white;
+      canvas.drawCircle(Offset(p.dx + 2 * z, p.dy - 47 * z), 14 * z, skin);
+      canvas.drawOval(Rect.fromCenter(center: Offset(p.dx + 2 * z, p.dy - 58 * z), width: 34 * z, height: 18 * z), cloth);
+      canvas.drawOval(Rect.fromCenter(center: Offset(p.dx - 4 * z, p.dy - 62 * z), width: 27 * z, height: 11 * z), cloth);
+      canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(p.dx - 18 * z, p.dy - 35 * z, 34 * z, 36 * z), Radius.circular(12 * z)), cloth);
+      canvas.drawLine(Offset(p.dx + 16 * z, p.dy - 20 * z), Offset(p.dx + 38 * z, p.dy - 42 * z), skin..strokeWidth = 8 * z);
+      canvas.drawCircle(Offset(p.dx + 39 * z, p.dy - 43 * z), 6 * z, skin);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ScenePainter oldDelegate) => oldDelegate.t != t;
+}
+
+class ExplorePage extends StatefulWidget {
+  const ExplorePage({super.key});
+
+  @override
+  State<ExplorePage> createState() => _ExplorePageState();
+}
+
+class _ExplorePageState extends State<ExplorePage> {
+  String query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: buko_service.FirebaseService.instance.watchCars(),
+      builder: (context, snapshot) {
+        final docs = (snapshot.data?.docs ?? const []).where((doc) {
+          final data = doc.data();
+          final text = '${data['name'] ?? ''} ${data['city'] ?? ''} ${data['type'] ?? ''}'.toLowerCase();
+          return query.isEmpty || text.contains(query.toLowerCase());
+        }).toList();
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const Text('استكشاف السيارات', style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 6),
+            const Text('اختار عربيتك من الإعلانات الموثوقة', style: TextStyle(color: muted)),
+            const SizedBox(height: 16),
+            TextField(onChanged: (value) => setState(() => query = value), decoration: const InputDecoration(hintText: 'الماركة أو المدينة أو النوع', prefixIcon: Icon(Icons.search))),
+            const SizedBox(height: 16),
+            ...docs.map((doc) => CarCard(data: doc.data(), id: doc.id)),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class CarCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final String id;
+  const CarCard({super.key, required this.data, required this.id});
+
+  @override
+  Widget build(BuildContext context) {
+    final rawImages = data['imageUrls'];
+    final images = rawImages is List ? rawImages.whereType<String>().toList() : <String>[];
+    final seller = data['sellerId'];
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white10)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(9),
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: images.isEmpty
+              ? Container(width: 76, height: 76, color: const Color(0xFF1B222C), child: const Icon(Icons.directions_car, color: gold, size: 30))
+              : Image.network(images.first, width: 76, height: 76, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 76, height: 76, color: const Color(0xFF1B222C), child: const Icon(Icons.directions_car, color: gold))),
+        ),
+        title: Text('${data['name'] ?? 'سيارة'} • ${data['year'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w800)),
+        subtitle: Padding(padding: const EdgeInsets.only(top: 5), child: Text('${data['price'] ?? ''} • ${data['city'] ?? ''}\n${data['type'] ?? ''}', style: const TextStyle(color: muted, height: 1.45))),
+        trailing: IconButton(
+          style: IconButton.styleFrom(backgroundColor: gold.withOpacity(.12)),
+          icon: const Icon(Icons.shopping_bag_outlined, color: gold),
+          onPressed: seller == null
+              ? null
+              : () async {
+                  try {
+                    await buko_service.FirebaseService.instance.createPurchaseRequest(carId: id, sellerId: seller.toString());
+                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب الشراء ✓')));
+                  } catch (error) {
+                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال الطلب: $error')));
+                  }
+                },
+        ),
+      ),
+    );
+  }
+}
+
+class SellPage extends StatefulWidget {
+  const SellPage({super.key});
+
+  @override
+  State<SellPage> createState() => _SellPageState();
+}
+
+class _SellPageState extends State<SellPage> {
+  final name = TextEditingController();
+  final year = TextEditingController();
+  final price = TextEditingController();
+  final city = TextEditingController();
+  final picker = ImagePicker();
+  final images = <XFile>[];
+  String type = 'سيدان';
+  bool loading = false;
+
+  @override
+  void dispose() {
+    name.dispose();
+    year.dispose();
+    price.dispose();
+    city.dispose();
+    super.dispose();
+  }
+
+  Future<void> pickImages() async {
+    try {
+      final selected = await picker.pickMultiImage(imageQuality: 82, maxWidth: 1600);
+      if (!mounted) return;
+      setState(() {
+        for (final file in selected) {
+          if (images.length >= 8) break;
+          if (!images.any((item) => item.path == file.path)) images.add(file);
+        }
+      });
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر اختيار الصور: $error')));
+    }
+  }
+
+  Future<void> submit() async {
+    final parsedYear = int.tryParse(year.text.trim());
+    if (name.text.trim().isEmpty || parsedYear == null || price.text.trim().isEmpty || city.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أكمل بيانات السيارة أولاً')));
+      return;
+    }
+    setState(() => loading = true);
+    try {
+      final urls = <String>[];
+      for (final image in images) {
+        urls.add(await buko_service.FirebaseService.instance.uploadCarImage(await image.readAsBytes(), image.name));
+      }
+      await buko_service.FirebaseService.instance.submitCar(name: name.text, year: parsedYear, price: price.text, city: city.text, type: type, imageUrls: urls);
+      if (!mounted) return;
+      name.clear();
+      year.clear();
+      price.clear();
+      city.clear();
+      setState(() => images.clear());
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال الإعلان للمراجعة ✓')));
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر نشر الإعلان: $error')));
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text('بيع سيارتك', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 6),
+        const Text('أضف بيانات سيارتك وسيتم مراجعتها قبل النشر.', style: TextStyle(color: muted)),
+        const SizedBox(height: 18),
+        TextField(controller: name, decoration: const InputDecoration(labelText: 'الماركة والموديل', prefixIcon: Icon(Icons.directions_car))),
+        const SizedBox(height: 10),
+        TextField(controller: year, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'سنة الصنع', prefixIcon: Icon(Icons.calendar_month))),
+        const SizedBox(height: 10),
+        TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'السعر', prefixIcon: Icon(Icons.payments_outlined))),
+        const SizedBox(height: 10),
+        TextField(controller: city, decoration: const InputDecoration(labelText: 'المدينة', prefixIcon: Icon(Icons.location_on_outlined))),
+        const SizedBox(height: 10),
+        DropdownButtonFormField<String>(value: type, decoration: const InputDecoration(labelText: 'نوع السيارة'), items: const ['سيدان', 'دفع رباعي', 'هاتشباك', 'بيك أب', 'باص'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => type = value ?? type)),
+        const SizedBox(height: 14),
+        OutlinedButton.icon(onPressed: loading ? null : pickImages, icon: const Icon(Icons.photo_library_outlined), label: Text(images.isEmpty ? 'أضف صور السيارة' : 'الصور: ${images.length}/8')),
+        if (images.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          SizedBox(height: 90, child: ListView.separated(scrollDirection: Axis.horizontal, itemCount: images.length, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (_, index) => ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.memory(images[index].readAsBytes() as dynamic, width: 90, height: 90, fit: BoxFit.cover)))),
+        ],
+        const SizedBox(height: 18),
+        SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: loading ? null : submit, icon: const Icon(Icons.publish), label: Text(loading ? 'جارٍ النشر...' : 'إرسال للمراجعة'))),
+      ],
+    );
+  }
+}
+
+class FavoritesPage extends StatelessWidget {
+  const FavoritesPage({super.key});
+
+  @override
+  Widget build(BuildContext context) => const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.favorite_border, size: 70, color: gold), SizedBox(height: 12), Text('المفضلة', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)), SizedBox(height: 6), Text('ستظهر السيارات المحفوظة هنا', style: TextStyle(color: muted))]));
+}
+
+class AccountPage extends StatelessWidget {
+  const AccountPage({super.key});
+
+  Future<bool> _isAdmin() async {
+    final user = auth.FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+    final token = await user.getIdTokenResult();
+    return token.claims?['admin'] == true;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _isAdmin(),
+      builder: (context, snapshot) {
+        return Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.person, size: 70, color: gold),
+              const SizedBox(height: 12),
+              const Text('حساب BUKO', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 18),
+              if (snapshot.data == true) ...[
+                FilledButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminPage())), icon: const Icon(Icons.admin_panel_settings), label: const Text('لوحة تحكم الإدارة')),
+                const SizedBox(height: 10),
+              ],
+              FilledButton.tonalIcon(onPressed: () => buko_service.FirebaseService.instance.signOut(), icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج')),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}

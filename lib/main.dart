@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
@@ -6,7 +7,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'firebase_options.dart';
-import 'services/firebase_service.dart';
+import 'services/firebase_service.dart' as buko_service;
 
 const green = Color(0xFF22C55E);
 const blue = Color(0xFF2563EB);
@@ -49,7 +50,7 @@ class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
   @override
   Widget build(BuildContext context) => StreamBuilder<auth.User?>(
-        stream: FirebaseService.instance.authState,
+        stream: buko_service.FirebaseService.instance.authState,
         builder: (_, snap) => snap.data == null ? const PhoneAuthPage() : const HomeShell(),
       );
 }
@@ -123,7 +124,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
         smsCode: code.text.trim(),
       );
       await auth.FirebaseAuth.instance.signInWithCredential(credential);
-      await FirebaseService.instance.saveUserProfile(
+      await buko_service.FirebaseService.instance.saveUserProfile(
         uid: auth.FirebaseAuth.instance.currentUser!.uid,
         name: 'مستخدم BUKO',
         phone: normalize(phone.text),
@@ -242,7 +243,7 @@ class HomePage extends StatelessWidget {
   const HomePage({super.key});
   @override
   Widget build(BuildContext context) => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FirebaseService.instance.watchCars(),
+        stream: buko_service.FirebaseService.instance.watchCars(),
         builder: (_, snap) {
           final docs = snap.data?.docs ?? [];
           return ListView(
@@ -273,7 +274,7 @@ class _ExplorePageState extends State<ExplorePage> {
   String query = '';
   @override
   Widget build(BuildContext context) => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FirebaseService.instance.watchCars(),
+        stream: buko_service.FirebaseService.instance.watchCars(),
         builder: (_, snap) {
           final docs = (snap.data?.docs ?? []).where((d) {
             final q = query.toLowerCase();
@@ -322,7 +323,7 @@ class CarCard extends StatelessWidget {
             final seller = data['sellerId'];
             if (seller == null) return;
             try {
-              await FirebaseService.instance.createPurchaseRequest(carId: id, sellerId: seller);
+              await buko_service.FirebaseService.instance.createPurchaseRequest(carId: id, sellerId: seller);
               if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب الشراء ✓')));
             } catch (e) {
               if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال الطلب: $e')));
@@ -389,7 +390,7 @@ class _SellPageState extends State<SellPage> {
     for (var i = 0; i < selectedImages.length; i++) {
       final image = selectedImages[i];
       final Uint8List bytes = await image.readAsBytes();
-      final url = await FirebaseService.instance.uploadCarImage(bytes, '${DateTime.now().millisecondsSinceEpoch}_$i.jpg');
+      final url = await buko_service.FirebaseService.instance.uploadCarImage(bytes, '${DateTime.now().millisecondsSinceEpoch}_$i.jpg');
       urls.add(url);
     }
     return urls;
@@ -407,7 +408,7 @@ class _SellPageState extends State<SellPage> {
     setState(() => loading = true);
     try {
       final urls = await uploadImages();
-      await FirebaseService.instance.submitCar(
+      await buko_service.FirebaseService.instance.submitCar(
         name: name.text,
         year: int.parse(year.text),
         price: price.text,
@@ -546,7 +547,7 @@ class AccountPage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               FilledButton.tonalIcon(
-                onPressed: () => FirebaseService.instance.signOut(),
+                onPressed: () => buko_service.FirebaseService.instance.signOut(),
                 icon: const Icon(Icons.logout),
                 label: const Text('تسجيل الخروج'),
               ),

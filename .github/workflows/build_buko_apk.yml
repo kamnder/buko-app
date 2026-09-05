@@ -12,34 +12,50 @@ jobs:
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
-      - name: Create Android platform files
-        run: flutter create --platforms=android .
-      - name: Remove generated Kotlin DSL duplicates
+
+      - name: Create a clean Android platform
         run: |
+          rm -rf android
+          flutter create --platforms=android --org com.buko .
           rm -f android/settings.gradle.kts android/build.gradle.kts android/app/build.gradle.kts
           rm -f android/app/src/main/kotlin/com/buko/buko/MainActivity.kt
-      - name: Fix Gradle version
-        run: sed -i 's#gradle-[0-9.]*-bin.zip#gradle-9.3.1-bin.zip#' android/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Configure Android build
+        run: |
+          sed -i 's#gradle-[0-9.]*-bin.zip#gradle-8.13-bin.zip#' android/gradle/wrapper/gradle-wrapper.properties
+          cat > android/gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx4096M -XX:MaxMetaspaceSize=1024M -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          android.enableJetifier=true
+          EOF
+
       - name: Get dependencies
         run: flutter pub get
+
       - name: Generate launcher icon
         run: dart run flutter_launcher_icons
+
       - name: Remove unused math import
         run: sed -i -E "/import 'dart:math'( as math)?;/d" lib/main.dart
+
       - name: Analyze
         run: flutter analyze --no-fatal-infos
+
       - name: Test
         run: flutter test
+
       - name: Build release APK
         run: flutter build apk --release
+
       - name: Verify APK
         run: |
-          set -e
+          set -euo pipefail
           APK=build/app/outputs/flutter-apk/app-release.apk
           test -s "$APK"
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
@@ -48,6 +64,7 @@ jobs:
           test -n "$ZIPALIGN"
           "$APKSIGNER" verify --verbose "$APK"
           "$ZIPALIGN" -c -v 4 "$APK"
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:

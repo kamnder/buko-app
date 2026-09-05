@@ -27,20 +27,22 @@ jobs:
       - name: Generate BUKO launcher icon
         run: dart run flutter_launcher_icons
 
-      - name: Patch known Dart syntax issue
+      - name: Patch Dart source before analysis
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p = Path('lib/main.dart')
           s = p.read_text(encoding='utf-8')
+          s = s.replace("import 'dart:math' as math;\n", '')
           old = "...widget.users.map((u) => Card(color: Colors.white, child: ListTile(leading: const Icon(Icons.person, color: blue), title: Text(u.name, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)), subtitle: Text('${u.phone} • ${u.role}', style: const TextStyle(color: Colors.black54)))),"
           new = old[:-1] + '),'
           if old in s:
               s = s.replace(old, new, 1)
-              p.write_text(s, encoding='utf-8')
               print('Patched admin users map closing parenthesis.')
           else:
-              print('No patch needed; source already contains the corrected line.')
+              print('Admin users map already correct.')
+          p.write_text(s, encoding='utf-8')
+          print('Removed unused dart:math import if present.')
           PY
 
       - name: Analyze

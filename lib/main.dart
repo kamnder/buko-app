@@ -6,6 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'firebase_options.dart';
+import 'admin_page.dart';
 import 'services/firebase_service.dart' as buko_service;
 
 const green = Color(0xFF22C55E);
@@ -296,4 +297,29 @@ class _SellPageState extends State<SellPage> {
 }
 
 class FavoritesPage extends StatelessWidget { const FavoritesPage({super.key}); @override Widget build(BuildContext context) => const Center(child: Text('المفضلة — ستتم مزامنتها مع Firebase في الخطوة التالية')); }
-class AccountPage extends StatelessWidget { const AccountPage({super.key}); @override Widget build(BuildContext context) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.person, size: 64), const SizedBox(height: 12), const Text('حساب BUKO', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), const SizedBox(height: 16), FilledButton.tonalIcon(onPressed: () => buko_service.FirebaseService.instance.signOut(), icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج'))])); }
+class AccountPage extends StatelessWidget {
+  const AccountPage({super.key});
+
+  Future<bool> _isAdmin() async {
+    final user = auth.FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+    final result = await user.getIdTokenResult();
+    return result.claims?['admin'] == true;
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<bool>(
+    future: _isAdmin(),
+    builder: (_, snap) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+      const Icon(Icons.person, size: 64),
+      const SizedBox(height: 12),
+      const Text('حساب BUKO', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 16),
+      if (snap.data == true) ...[
+        FilledButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminPage())), icon: const Icon(Icons.admin_panel_settings), label: const Text('لوحة تحكم الإدارة')),
+        const SizedBox(height: 10),
+      ],
+      FilledButton.tonalIcon(onPressed: () => buko_service.FirebaseService.instance.signOut(), icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج')),
+    ])),
+  );
+}

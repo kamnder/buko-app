@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -79,6 +80,101 @@ class _BukoAppState extends State<BukoApp> {
   }
 }
 
+class AnimatedCarBackground extends StatefulWidget {
+  final Widget child;
+  final bool dense;
+  const AnimatedCarBackground({super.key, required this.child, this.dense = false});
+
+  @override
+  State<AnimatedCarBackground> createState() => _AnimatedCarBackgroundState();
+}
+
+class _AnimatedCarBackgroundState extends State<AnimatedCarBackground>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = AnimationController(vsync: this, duration: const Duration(seconds: 12))..repeat();
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        IgnorePointer(
+          child: AnimatedBuilder(
+            animation: controller,
+            builder: (_, __) => CustomPaint(
+              painter: _CarRacePainter(controller.value, dense: widget.dense),
+            ),
+          ),
+        ),
+        widget.child,
+      ],
+    );
+  }
+}
+
+class _CarRacePainter extends CustomPainter {
+  final double progress;
+  final bool dense;
+  _CarRacePainter(this.progress, {required this.dense});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final roadPaint = Paint()..color = Colors.white.withAlpha(8);
+    final glowPaint = Paint()..color = green.withAlpha(8);
+    final roadY = size.height * (dense ? .84 : .88);
+    canvas.drawRect(Rect.fromLTWH(0, roadY, size.width, 1), roadPaint);
+    canvas.drawCircle(Offset(size.width * .12, size.height * .18), size.width * .22, glowPaint);
+    canvas.drawCircle(Offset(size.width * .88, size.height * .72), size.width * .18,
+        Paint()..color = blue.withAlpha(7));
+
+    final lanes = dense ? 5 : 4;
+    for (var i = 0; i < lanes; i++) {
+      final speed = 1.0 + i * .17;
+      final phase = (progress * speed + i * .23) % 1.0;
+      final y = size.height * (.16 + i * .17);
+      final x = phase * (size.width + 90) - 70;
+      _drawCar(canvas, Offset(x, y), 0.72 + (i % 2) * .12, i.isEven);
+    }
+  }
+
+  void _drawCar(Canvas canvas, Offset p, double scale, bool forward) {
+    final body = Paint()..color = (forward ? green : blue).withAlpha(28);
+    final glass = Paint()..color = Colors.white.withAlpha(18);
+    final wheel = Paint()..color = Colors.black.withAlpha(45);
+    final w = 46 * scale;
+    final h = 17 * scale;
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(p.dx, p.dy, w, h),
+      Radius.circular(6 * scale),
+    );
+    canvas.drawRRect(rect, body);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(p.dx + w * .22, p.dy - h * .48, w * .5, h * .7),
+        Radius.circular(5 * scale),
+      ),
+      glass,
+    );
+    canvas.drawCircle(Offset(p.dx + w * .2, p.dy + h), 4 * scale, wheel);
+    canvas.drawCircle(Offset(p.dx + w * .8, p.dy + h), 4 * scale, wheel);
+  }
+
+  @override
+  bool shouldRepaint(covariant _CarRacePainter oldDelegate) => oldDelegate.progress != progress;
+}
+
 class AuthScreen extends StatefulWidget {
   final ValueChanged<BukoTheme> onTheme;
   const AuthScreen({super.key, required this.onTheme});
@@ -126,7 +222,7 @@ class _AuthScreenState extends State<AuthScreen> {
     requests.add(PurchaseRequest(user!, car));
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تم إرسال طلب الشراء للإدارة')),
+      const SnackBar(content: Text('تم استلام طلبك بنجاح ✓')),
     );
   }
 
@@ -154,7 +250,7 @@ class _AuthScreenState extends State<AuthScreen> {
           onSubmit: (car) {
             setState(() => pending.add(car));
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('تم إرسال إعلانك للمراجعة')),
+              const SnackBar(content: Text('تم استلام إعلانك بنجاح ✓ وسيظهر بعد اكتمال المراجعة')),
             );
           },
         );
@@ -178,9 +274,11 @@ class _AuthScreenState extends State<AuthScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         body: SafeArea(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: KeyedSubtree(key: ValueKey(tab), child: page()),
+          child: AnimatedCarBackground(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: KeyedSubtree(key: ValueKey(tab), child: page()),
+            ),
           ),
         ),
         bottomNavigationBar: NavigationBar(
@@ -275,89 +373,92 @@ class _AuthFormState extends State<AuthForm> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        body: Stack(
-          children: [
-            Positioned(top: -90, left: -80, child: _orb(green, 250)),
-            Positioned(bottom: -120, right: -90, child: _orb(blue, 290)),
-            SafeArea(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(22),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 470),
-                    child: Column(
-                      children: [
-                        _logo(),
-                        const SizedBox(height: 28),
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(20),
-                            child: Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(child: _modeButton('دخول', loginMode)),
-                                    Expanded(child: _modeButton('حساب جديد', !loginMode)),
-                                  ],
-                                ),
-                                const SizedBox(height: 20),
-                                if (!loginMode)
+        body: AnimatedCarBackground(
+          dense: true,
+          child: Stack(
+            children: [
+              Positioned(top: -90, left: -80, child: _orb(green, 250)),
+              Positioned(bottom: -120, right: -90, child: _orb(blue, 290)),
+              SafeArea(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(22),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 470),
+                      child: Column(
+                        children: [
+                          _logo(),
+                          const SizedBox(height: 28),
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(child: _modeButton('دخول', loginMode)),
+                                      Expanded(child: _modeButton('حساب جديد', !loginMode)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                  if (!loginMode)
+                                    TextField(
+                                      controller: name,
+                                      decoration: const InputDecoration(labelText: 'الاسم الكامل', prefixIcon: Icon(Icons.person_outline)),
+                                    ),
+                                  if (!loginMode) const SizedBox(height: 12),
                                   TextField(
-                                    controller: name,
-                                    decoration: const InputDecoration(labelText: 'الاسم الكامل', prefixIcon: Icon(Icons.person_outline)),
+                                    controller: phone,
+                                    keyboardType: TextInputType.phone,
+                                    decoration: const InputDecoration(labelText: 'رقم الهاتف السوداني', hintText: '+249XXXXXXXXX', prefixIcon: Icon(Icons.phone_iphone)),
                                   ),
-                                if (!loginMode) const SizedBox(height: 12),
-                                TextField(
-                                  controller: phone,
-                                  keyboardType: TextInputType.phone,
-                                  decoration: const InputDecoration(labelText: 'رقم الهاتف السوداني', hintText: '+249XXXXXXXXX', prefixIcon: Icon(Icons.phone_iphone)),
-                                ),
-                                const SizedBox(height: 12),
-                                TextField(
-                                  controller: password,
-                                  obscureText: true,
-                                  decoration: InputDecoration(
-                                    labelText: 'كلمة المرور',
-                                    hintText: loginMode ? 'كود الإدارة يُكتب هنا للدخول كأدمن' : 'أدخل كلمة مرور حسابك',
-                                    prefixIcon: const Icon(Icons.lock_outline),
+                                  const SizedBox(height: 12),
+                                  TextField(
+                                    controller: password,
+                                    obscureText: true,
+                                    decoration: InputDecoration(
+                                      labelText: 'كلمة المرور',
+                                      hintText: loginMode ? 'أدخل كلمة مرورك' : 'أدخل كلمة مرور حسابك',
+                                      prefixIcon: const Icon(Icons.lock_outline),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 12),
-                                SegmentedButton<String>(
-                                  segments: const [
-                                    ButtonSegment(value: 'buyer', label: Text('مشتري'), icon: Icon(Icons.shopping_bag_outlined)),
-                                    ButtonSegment(value: 'seller', label: Text('بائع'), icon: Icon(Icons.storefront_outlined)),
+                                  const SizedBox(height: 12),
+                                  SegmentedButton<String>(
+                                    segments: const [
+                                      ButtonSegment(value: 'buyer', label: Text('مشتري'), icon: Icon(Icons.shopping_bag_outlined)),
+                                      ButtonSegment(value: 'seller', label: Text('بائع'), icon: Icon(Icons.storefront_outlined)),
+                                    ],
+                                    selected: {role},
+                                    onSelectionChanged: (value) => setState(() => role = value.first),
+                                  ),
+                                  if (error.isNotEmpty) ...[
+                                    const SizedBox(height: 10),
+                                    Text(error, style: const TextStyle(color: Colors.redAccent)),
                                   ],
-                                  selected: {role},
-                                  onSelectionChanged: (value) => setState(() => role = value.first),
-                                ),
-                                if (error.isNotEmpty) ...[
-                                  const SizedBox(height: 10),
-                                  Text(error, style: const TextStyle(color: Colors.redAccent)),
-                                ],
-                                const SizedBox(height: 12),
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 52,
-                                  child: FilledButton.icon(
-                                    onPressed: submit,
-                                    icon: Icon(loginMode ? Icons.login : Icons.person_add_alt_1),
-                                    label: Text(loginMode ? 'دخول إلى BUKO' : 'إنشاء الحساب'),
+                                  const SizedBox(height: 12),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 52,
+                                    child: FilledButton.icon(
+                                      onPressed: submit,
+                                      icon: Icon(loginMode ? Icons.login : Icons.person_add_alt_1),
+                                      label: Text(loginMode ? 'دخول إلى BUKO' : 'إنشاء الحساب'),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text('BUKO • منصة سيارات عصرية', style: TextStyle(color: Colors.white54)),
-                      ],
+                          const SizedBox(height: 12),
+                          const Text('BUKO • منصة سيارات عصرية', style: TextStyle(color: Colors.white54)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -407,27 +508,29 @@ class HomePage extends StatelessWidget {
   const HomePage({super.key, required this.cars, required this.onTap});
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Row(children: [Icon(Icons.auto_awesome, color: yellow), SizedBox(width: 8), Text('BUKO', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900))]),
-        const SizedBox(height: 18),
-        Container(
-          padding: const EdgeInsets.all(25),
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(28), gradient: const LinearGradient(colors: [Color(0xFF123D38), navy])),
-          child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('اكتشف بثقة', style: TextStyle(color: green, fontWeight: FontWeight.bold)), SizedBox(height: 7), Text('سيارتك القادمة\nتبدأ من هنا', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900)), SizedBox(height: 8), Text('تصفح • قارن • اطلب', style: TextStyle(color: Colors.white70))]),
-        ),
-        const SizedBox(height: 15),
-        const TextField(decoration: InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'ابحث عن سيارة أو موديل', suffixIcon: Icon(Icons.tune))),
-        const SizedBox(height: 22),
-        const Text('سيارات مميزة', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 10),
-        SizedBox(height: 245, child: ListView(scrollDirection: Axis.horizontal, children: cars.map((car) => CarTile(car: car, onTap: () => onTap(car))).toList())),
-        const SizedBox(height: 18),
-        const Text('الأحدث', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 10),
-        ...cars.map((car) => CarList(car: car, onTap: () => onTap(car))),
-      ],
+    return AnimatedCarBackground(
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Row(children: [Icon(Icons.auto_awesome, color: yellow), SizedBox(width: 8), Text('BUKO', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900))]),
+          const SizedBox(height: 18),
+          Container(
+            padding: const EdgeInsets.all(25),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(28), gradient: const LinearGradient(colors: [Color(0xFF123D38), navy])),
+            child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('اكتشف بثقة', style: TextStyle(color: green, fontWeight: FontWeight.bold)), SizedBox(height: 7), Text('سيارتك القادمة\nتبدأ من هنا', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900)), SizedBox(height: 8), Text('تصفح • قارن • اطلب', style: TextStyle(color: Colors.white70))]),
+          ),
+          const SizedBox(height: 15),
+          const TextField(decoration: InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'ابحث عن سيارة أو موديل', suffixIcon: Icon(Icons.tune))),
+          const SizedBox(height: 22),
+          const Text('سيارات مميزة', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 10),
+          SizedBox(height: 245, child: ListView(scrollDirection: Axis.horizontal, children: cars.map((car) => CarTile(car: car, onTap: () => onTap(car))).toList())),
+          const SizedBox(height: 18),
+          const Text('الأحدث', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 10),
+          ...cars.map((car) => CarList(car: car, onTap: () => onTap(car))),
+        ],
+      ),
     );
   }
 }
@@ -438,17 +541,19 @@ class ExplorePage extends StatelessWidget {
   const ExplorePage({super.key, required this.cars, required this.onTap});
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text('استكشاف', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 12),
-        const TextField(decoration: InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'ابحث ثم صفِّ النتائج')),
-        const SizedBox(height: 14),
-        const Wrap(spacing: 8, children: [Chip(label: Text('الأحدث')), Chip(label: Text('السعر')), Chip(label: Text('سيدان')), Chip(label: Text('دفع رباعي'))]),
-        const SizedBox(height: 10),
-        ...cars.map((car) => CarList(car: car, onTap: () => onTap(car))),
-      ],
+    return AnimatedCarBackground(
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text('استكشاف', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 12),
+          const TextField(decoration: InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'ابحث ثم صفِّ النتائج')),
+          const SizedBox(height: 14),
+          const Wrap(spacing: 8, children: [Chip(label: Text('الأحدث')), Chip(label: Text('السعر')), Chip(label: Text('سيدان')), Chip(label: Text('دفع رباعي'))]),
+          const SizedBox(height: 10),
+          ...cars.map((car) => CarList(car: car, onTap: () => onTap(car))),
+        ],
+      ),
     );
   }
 }
@@ -532,41 +637,43 @@ class _DetailsPageState extends State<DetailsPage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(title: const Text('تفاصيل السيارة')),
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            SizedBox(
-              height: 280,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(26),
-                child: images.isEmpty
-                    ? const CarImage(images: [])
-                    : PageView.builder(
-                        itemCount: images.length,
-                        onPageChanged: (value) => setState(() => index = value),
-                        itemBuilder: (_, i) => Image.file(File(images[i]), fit: BoxFit.cover),
-                      ),
+        body: AnimatedCarBackground(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              SizedBox(
+                height: 280,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(26),
+                  child: images.isEmpty
+                      ? const CarImage(images: [])
+                      : PageView.builder(
+                          itemCount: images.length,
+                          onPageChanged: (value) => setState(() => index = value),
+                          itemBuilder: (_, i) => Image.file(File(images[i]), fit: BoxFit.cover),
+                        ),
+                ),
               ),
-            ),
-            if (images.length > 1) Padding(padding: const EdgeInsets.only(top: 8), child: Text('${index + 1} / ${images.length}', textAlign: TextAlign.center)),
-            const SizedBox(height: 18),
-            Text(widget.car.name, style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900)),
-            Text(widget.car.price, style: const TextStyle(fontSize: 25, color: green, fontWeight: FontWeight.w900)),
-            Card(
-              color: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(children: [
-                  _row('السنة', '${widget.car.year}'),
-                  _row('المدينة', widget.car.city),
-                  _row('النوع', widget.car.type),
-                  _row('البائع', widget.car.seller),
-                ]),
+              if (images.length > 1) Padding(padding: const EdgeInsets.only(top: 8), child: Text('${index + 1} / ${images.length}', textAlign: TextAlign.center)),
+              const SizedBox(height: 18),
+              Text(widget.car.name, style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900)),
+              Text(widget.car.price, style: const TextStyle(fontSize: 25, color: green, fontWeight: FontWeight.w900)),
+              Card(
+                color: Colors.white,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(children: [
+                    _row('السنة', '${widget.car.year}'),
+                    _row('المدينة', widget.car.city),
+                    _row('النوع', widget.car.type),
+                    _row('البائع', widget.car.seller),
+                  ]),
+                ),
               ),
-            ),
-            const SizedBox(height: 15),
-            SizedBox(height: 54, child: FilledButton.icon(onPressed: widget.onBuy, icon: const Icon(Icons.shopping_cart_checkout), label: const Text('طلب شراء السيارة'))),
-          ],
+              const SizedBox(height: 15),
+              SizedBox(height: 54, child: FilledButton.icon(onPressed: widget.onBuy, icon: const Icon(Icons.shopping_cart_checkout), label: const Text('طلب شراء السيارة'))),
+            ],
+          ),
         ),
       ),
     );
@@ -622,53 +729,55 @@ class _SellPageState extends State<SellPage> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(18),
-      children: [
-        const Text('بيع سيارتك', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 6),
-        const Text('أضف صورًا واضحة وبيانات السيارة ليصل إعلانك للمشترين.', style: TextStyle(color: Colors.white70)),
-        const SizedBox(height: 18),
-        GestureDetector(
-          onTap: pick,
-          child: Container(
-            height: 170,
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), border: Border.all(color: green.withAlpha(100)), gradient: const LinearGradient(colors: [Color(0xFF123D38), Color(0xFF0C2430)])),
-            child: photos.isEmpty
-                ? const Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.add_a_photo_outlined, size: 48, color: green), SizedBox(height: 8), Text('أضف صور السيارة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), Text('يمكنك اختيار عدة صور', style: TextStyle(color: Colors.white60))])
-                : ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: photos.length,
-                    itemBuilder: (_, i) => Stack(children: [
-                      Container(width: 150, margin: const EdgeInsets.all(8), child: ClipRRect(borderRadius: BorderRadius.circular(16), child: Image.file(File(photos[i]), fit: BoxFit.cover))),
-                      Positioned(top: 10, right: 10, child: CircleAvatar(radius: 14, backgroundColor: Colors.black87, child: IconButton(padding: EdgeInsets.zero, onPressed: () => setState(() => photos.removeAt(i)), icon: const Icon(Icons.close, size: 16)))),
-                    ]),
-                  ),
+    return AnimatedCarBackground(
+      child: ListView(
+        padding: const EdgeInsets.all(18),
+        children: [
+          const Text('بيع سيارتك', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 6),
+          const Text('أضف صورًا واضحة وبيانات السيارة ليصل إعلانك للمشترين.', style: TextStyle(color: Colors.white70)),
+          const SizedBox(height: 18),
+          GestureDetector(
+            onTap: pick,
+            child: Container(
+              height: 170,
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), border: Border.all(color: green.withAlpha(100)), gradient: const LinearGradient(colors: [Color(0xFF123D38), Color(0xFF0C2430)])),
+              child: photos.isEmpty
+                  ? const Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.add_a_photo_outlined, size: 48, color: green), SizedBox(height: 8), Text('أضف صور السيارة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), Text('يمكنك اختيار عدة صور', style: TextStyle(color: Colors.white60))])
+                  : ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: photos.length,
+                      itemBuilder: (_, i) => Stack(children: [
+                        Container(width: 150, margin: const EdgeInsets.all(8), child: ClipRRect(borderRadius: BorderRadius.circular(16), child: Image.file(File(photos[i]), fit: BoxFit.cover))),
+                        Positioned(top: 10, right: 10, child: CircleAvatar(radius: 14, backgroundColor: Colors.black87, child: IconButton(padding: EdgeInsets.zero, onPressed: () => setState(() => photos.removeAt(i)), icon: const Icon(Icons.close, size: 16)))),
+                      ]),
+                    ),
+            ),
           ),
-        ),
-        const SizedBox(height: 18),
-        TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم السيارة', prefixIcon: Icon(Icons.directions_car))),
-        const SizedBox(height: 10),
-        TextField(controller: year, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'السنة', prefixIcon: Icon(Icons.calendar_today))),
-        const SizedBox(height: 10),
-        TextField(controller: price, decoration: const InputDecoration(labelText: 'السعر', prefixIcon: Icon(Icons.payments_outlined))),
-        const SizedBox(height: 10),
-        DropdownButtonFormField<String>(
-          initialValue: type,
-          decoration: const InputDecoration(labelText: 'النوع'),
-          items: const ['سيدان', 'دفع رباعي', 'بيك أب'].map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(),
-          onChanged: (value) => setState(() => type = value ?? type),
-        ),
-        const SizedBox(height: 10),
-        DropdownButtonFormField<String>(
-          initialValue: city,
-          decoration: const InputDecoration(labelText: 'المدينة'),
-          items: const ['الخرطوم', 'أم درمان', 'بحري', 'بورتسودان'].map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(),
-          onChanged: (value) => setState(() => city = value ?? city),
-        ),
-        const SizedBox(height: 18),
-        SizedBox(height: 52, child: FilledButton.icon(onPressed: submit, icon: const Icon(Icons.rocket_launch), label: const Text('إرسال الإعلان للمراجعة'))),
-      ],
+          const SizedBox(height: 18),
+          TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم السيارة', prefixIcon: Icon(Icons.directions_car))),
+          const SizedBox(height: 10),
+          TextField(controller: year, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'السنة', prefixIcon: Icon(Icons.calendar_today))),
+          const SizedBox(height: 10),
+          TextField(controller: price, decoration: const InputDecoration(labelText: 'السعر', prefixIcon: Icon(Icons.payments_outlined))),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(
+            initialValue: type,
+            decoration: const InputDecoration(labelText: 'النوع'),
+            items: const ['سيدان', 'دفع رباعي', 'بيك أب'].map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(),
+            onChanged: (value) => setState(() => type = value ?? type),
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(
+            initialValue: city,
+            decoration: const InputDecoration(labelText: 'المدينة'),
+            items: const ['الخرطوم', 'أم درمان', 'بحري', 'بورتسودان'].map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(),
+            onChanged: (value) => setState(() => city = value ?? city),
+          ),
+          const SizedBox(height: 18),
+          SizedBox(height: 52, child: FilledButton.icon(onPressed: submit, icon: const Icon(Icons.rocket_launch), label: const Text('إرسال الإعلان للمراجعة'))),
+        ],
+      ),
     );
   }
 }
@@ -680,32 +789,34 @@ class AccountPage extends StatelessWidget {
   const AccountPage({super.key, required this.user, required this.onLogout, required this.onTheme});
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(18),
-      children: [
-        const Text('حسابي', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 12),
-        Card(child: ListTile(leading: const CircleAvatar(child: Icon(Icons.person)), title: Text(user.name), subtitle: Text('${user.phone} • ${user.role == 'seller' ? 'بائع' : 'مشتري'}'))),
-        ListTile(
-          leading: const Icon(Icons.palette_outlined),
-          title: const Text('الثيمات'),
-          onTap: () async {
-            final selected = await showDialog<BukoTheme>(
-              context: context,
-              builder: (dialogContext) => SimpleDialog(
-                title: const Text('اختيار الثيم'),
-                children: [
-                  SimpleDialogOption(onPressed: () => Navigator.pop(dialogContext, BukoTheme.midnight), child: const Text('Midnight')),
-                  SimpleDialogOption(onPressed: () => Navigator.pop(dialogContext, BukoTheme.emerald), child: const Text('Emerald')),
-                  SimpleDialogOption(onPressed: () => Navigator.pop(dialogContext, BukoTheme.royal), child: const Text('Royal')),
-                ],
-              ),
-            );
-            if (selected != null) onTheme(selected);
-          },
-        ),
-        ListTile(leading: const Icon(Icons.logout), title: const Text('تسجيل الخروج'), onTap: onLogout),
-      ],
+    return AnimatedCarBackground(
+      child: ListView(
+        padding: const EdgeInsets.all(18),
+        children: [
+          const Text('حسابي', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 12),
+          Card(child: ListTile(leading: const CircleAvatar(child: Icon(Icons.person)), title: Text(user.name), subtitle: Text('${user.phone} • ${user.role == 'seller' ? 'بائع' : 'مشتري'}'))),
+          ListTile(
+            leading: const Icon(Icons.palette_outlined),
+            title: const Text('الثيمات'),
+            onTap: () async {
+              final selected = await showDialog<BukoTheme>(
+                context: context,
+                builder: (dialogContext) => SimpleDialog(
+                  title: const Text('اختيار الثيم'),
+                  children: [
+                    SimpleDialogOption(onPressed: () => Navigator.pop(dialogContext, BukoTheme.midnight), child: const Text('Midnight')),
+                    SimpleDialogOption(onPressed: () => Navigator.pop(dialogContext, BukoTheme.emerald), child: const Text('Emerald')),
+                    SimpleDialogOption(onPressed: () => Navigator.pop(dialogContext, BukoTheme.royal), child: const Text('Royal')),
+                  ],
+                ),
+              );
+              if (selected != null) onTheme(selected);
+            },
+          ),
+          ListTile(leading: const Icon(Icons.logout), title: const Text('تسجيل الخروج'), onTap: onLogout),
+        ],
+      ),
     );
   }
 }
@@ -730,36 +841,38 @@ class _AdminPageState extends State<AdminPage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(title: const Text('BUKO ADMIN'), actions: [IconButton(onPressed: () => setState(() {}), icon: const Icon(Icons.refresh))]),
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Card(child: ListTile(leading: const Icon(Icons.dashboard, color: green), title: const Text('لوحة التحكم'), subtitle: Text('${widget.users.length} مستخدم • ${widget.cars.length} سيارة • ${widget.pending.length} معلقة • ${widget.requests.length} طلب شراء'))),
-            FilledButton.icon(onPressed: post, icon: const Icon(Icons.add_business), label: const Text('إضافة منشور مباشر')),
-            const SizedBox(height: 20),
-            const Text('المستخدمون', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
-            ...widget.users.map((u) => Card(color: Colors.white, child: ListTile(leading: const Icon(Icons.person, color: blue), title: Text(u.name, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)), subtitle: Text('${u.phone} • ${u.role}', style: const TextStyle(color: Colors.black54)))),
-            const SizedBox(height: 18),
-            const Text('الإعلانات قيد المراجعة', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
-            if (widget.pending.isEmpty) const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('لا توجد إعلانات معلقة', style: TextStyle(color: Colors.white60))),
-            ...List.generate(widget.pending.length, (i) {
-              final car = widget.pending[i];
-              return Card(
-                color: Colors.white,
-                child: ListTile(
-                  leading: SizedBox(width: 55, height: 55, child: CarImage(images: car.images)),
-                  title: Text(car.name, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
-                  subtitle: Text('${car.year} • ${car.city} • ${car.price}', style: const TextStyle(color: Colors.black54)),
-                  trailing: Wrap(children: [
-                    IconButton(onPressed: () { widget.onApprove(i); setState(() {}); }, icon: const Icon(Icons.check_circle, color: green)),
-                    IconButton(onPressed: () { widget.onReject(i); setState(() {}); }, icon: const Icon(Icons.cancel, color: Colors.red)),
-                  ]),
-                ),
-              );
-            }),
-            const SizedBox(height: 18),
-            const Text('طلبات الشراء', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
-            ...widget.requests.map((request) => Card(child: ListTile(leading: const Icon(Icons.shopping_cart, color: yellow), title: Text(request.car.name), subtitle: Text('${request.buyer.name} • ${request.buyer.phone}')))),
-          ],
+        body: AnimatedCarBackground(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Card(child: ListTile(leading: const Icon(Icons.dashboard, color: green), title: const Text('لوحة التحكم'), subtitle: Text('${widget.users.length} مستخدم • ${widget.cars.length} سيارة • ${widget.pending.length} معلقة • ${widget.requests.length} طلب شراء'))),
+              FilledButton.icon(onPressed: post, icon: const Icon(Icons.add_business), label: const Text('إضافة منشور مباشر')),
+              const SizedBox(height: 20),
+              const Text('المستخدمون', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
+              ...widget.users.map((u) => Card(color: Colors.white, child: ListTile(leading: const Icon(Icons.person, color: blue), title: Text(u.name, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)), subtitle: Text('${u.phone} • ${u.role}', style: const TextStyle(color: Colors.black54))))),
+              const SizedBox(height: 18),
+              const Text('الإعلانات قيد المراجعة', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
+              if (widget.pending.isEmpty) const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('لا توجد إعلانات معلقة', style: TextStyle(color: Colors.white60))),
+              ...List.generate(widget.pending.length, (i) {
+                final car = widget.pending[i];
+                return Card(
+                  color: Colors.white,
+                  child: ListTile(
+                    leading: SizedBox(width: 55, height: 55, child: CarImage(images: car.images)),
+                    title: Text(car.name, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+                    subtitle: Text('${car.year} • ${car.city} • ${car.price}', style: const TextStyle(color: Colors.black54)),
+                    trailing: Wrap(children: [
+                      IconButton(onPressed: () { widget.onApprove(i); setState(() {}); }, icon: const Icon(Icons.check_circle, color: green)),
+                      IconButton(onPressed: () { widget.onReject(i); setState(() {}); }, icon: const Icon(Icons.cancel, color: Colors.red)),
+                    ]),
+                  ),
+                );
+              }),
+              const SizedBox(height: 18),
+              const Text('طلبات الشراء', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
+              ...widget.requests.map((request) => Card(child: ListTile(leading: const Icon(Icons.shopping_cart, color: yellow), title: Text(request.car.name), subtitle: Text('${request.buyer.name} • ${request.buyer.phone}')))),
+            ],
+          ),
         ),
       ),
     );

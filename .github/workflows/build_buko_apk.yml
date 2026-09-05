@@ -21,6 +21,11 @@ jobs:
       - name: Create Android platform files
         run: flutter create --platforms=android .
 
+      - name: Fix Gradle version for current Android Gradle Plugin
+        run: |
+          sed -i 's#gradle-[0-9.]*-bin.zip#gradle-9.3.1-bin.zip#' android/gradle/wrapper/gradle-wrapper.properties
+          grep distributionUrl android/gradle/wrapper/gradle-wrapper.properties
+
       - name: Get dependencies
         run: flutter pub get
 

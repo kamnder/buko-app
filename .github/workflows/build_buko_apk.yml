@@ -21,7 +21,7 @@ jobs:
       - name: Create Android platform files
         run: flutter create --platforms=android .
 
-      - name: Fix Android Java/Kotlin compatibility
+      - name: Configure Android compatibility and signing
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -32,16 +32,12 @@ jobs:
               s = re.sub(r'compileOptions\s*\{.*?\n\s*\}', "compileOptions {\n        sourceCompatibility JavaVersion.VERSION_17\n        targetCompatibility JavaVersion.VERSION_17\n    }", s, count=1, flags=re.S)
           else:
               s = s.replace('android {', "android {\n    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_17\n        targetCompatibility JavaVersion.VERSION_17\n    }", 1)
-          if 'kotlinOptions {' not in s:
-              s = s.replace('android {', "android {\n    kotlinOptions {\n        jvmTarget = '17'\n    }", 1)
-          else:
+          if 'kotlinOptions {' in s:
               s = re.sub(r'kotlinOptions\s*\{.*?\n\s*\}', "kotlinOptions {\n        jvmTarget = '17'\n    }", s, count=1, flags=re.S)
+          else:
+              s = s.replace('android {', "android {\n    kotlinOptions {\n        jvmTarget = '17'\n    }", 1)
           p.write_text(s)
-          print('Configured Java and Kotlin JVM target to 17.')
           PY
-
-      - name: Configure release signing
-        run: |
           keytool -genkeypair -v \
             -keystore android/buko-release.keystore \
             -alias buko \
@@ -55,20 +51,30 @@ jobs:
           from pathlib import Path
           p = Path('android/app/build.gradle')
           s = p.read_text()
-          marker = 'android {'
-          signing = '''android {\n    signingConfigs {\n        release {\n            storeFile file("../buko-release.keystore")\n            storePassword "changeit"\n            keyAlias "buko"\n            keyPassword "changeit"\n        }\n    }\n'''
-          s = s.replace(marker, signing, 1)
-          if 'signingConfig signingConfigs.release' in s:
-              pass
-          else:
-              s = s.replace('defaultConfig {', 'buildTypes {\n        release {\n            signingConfig signingConfigs.release\n        }\n    }\n\n    defaultConfig {', 1)
+          if 'signingConfigs {' not in s:
+              s = s.replace('android {', '''android {
+    signingConfigs {
+        release {
+            storeFile file("../buko-release.keystore")
+            storePassword "changeit"
+            keyAlias "buko"
+            keyPassword "changeit"
+        }
+    }
+''', 1)
+          if 'signingConfig signingConfigs.release' not in s:
+              s = s.replace('defaultConfig {', '''buildTypes {
+        release {
+            signingConfig signingConfigs.release
+        }
+    }
+
+    defaultConfig {''', 1)
           p.write_text(s)
           PY
 
-      - name: Fix Gradle version for current Android Gradle Plugin
-        run: |
-          sed -i 's#gradle-[0-9.]*-bin.zip#gradle-9.3.1-bin.zip#' android/gradle/wrapper/gradle-wrapper.properties
-          grep distributionUrl android/gradle/wrapper/gradle-wrapper.properties
+      - name: Fix Gradle version
+        run: sed -i 's#gradle-[0-9.]*-bin.zip#gradle-9.3.1-bin.zip#' android/gradle/wrapper/gradle-wrapper.properties
 
       - name: Get dependencies
         run: flutter pub get
@@ -76,22 +82,13 @@ jobs:
       - name: Generate BUKO launcher icon
         run: dart run flutter_launcher_icons
 
-      - name: Patch Dart source before analysis
+      - name: Patch Dart source
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p = Path('lib/main.dart')
-          s = p.read_text(encoding='utf-8')
-          s = s.replace("import 'dart:math' as math;\n", '')
-          old = "...widget.users.map((u) => Card(color: Colors.white, child: ListTile(leading: const Icon(Icons.person, color: blue), title: Text(u.name, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)), subtitle: Text('${u.phone} • ${u.role}', style: const TextStyle(color: Colors.black54)))),"
-          new = old[:-1] + '),'
-          if old in s:
-              s = s.replace(old, new, 1)
-              print('Patched admin users map closing parenthesis.')
-          else:
-              print('Admin users map already correct.')
+          s = p.read_text(encoding='utf-8').replace("import 'dart:math' as math;\n", '')
           p.write_text(s, encoding='utf-8')
-          print('Removed unused dart:math import if present.')
           PY
 
       - name: Analyze
@@ -100,16 +97,18 @@ jobs:
       - name: Test
         run: flutter test
 
-      - name: Build APK
+      - name: Build signed APK
         run: flutter build apk --release
 
-      - name: Verify APK signature
+      - name: Verify APK
         run: |
+          set -e
           APK="build/app/outputs/flutter-apk/app-release.apk"
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
-          test -n "$APKSIGNER"
+          test -s "$APK"
           "$APKSIGNER" verify --verbose "$APK"
-          unzip -l "$APK" | grep -E '\.(RSA|DSA|EC)$'
+          "$APKSIGNER" verify --print-certs "$APK"
+          echo "APK signature verification passed."
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

@@ -9,12 +9,6 @@ on:
 permissions:
   contents: write
 
-env:
-  FIREBASE_PROJECT_NUMBER: "113136352409"
-  FIREBASE_PROJECT_ID: "buko-6f769"
-  FIREBASE_APP_ID: "1:113136352409:android:c568ce9556ae2af5dc0c08"
-  FIREBASE_STORAGE_BUCKET: "buko-6f769.firebasestorage.app"
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -33,20 +27,13 @@ jobs:
           rm -rf android
           flutter create --platforms=android --org com.buko .
 
-      - name: Configure Android package and build
+      - name: Configure Android package
         run: |
           sed -i 's/namespace = "com\.buko\.buko"/namespace = "com.buko.app"/' android/app/build.gradle.kts
           sed -i 's/applicationId = "com\.buko\.buko"/applicationId = "com.buko.app"/' android/app/build.gradle.kts
           mkdir -p android/app/src/main/kotlin/com/buko/app
-          sed 's/^package com\.buko\.buko$/package com.buko.app/' \
-            android/app/src/main/kotlin/com/buko/buko/MainActivity.kt \
-            > android/app/src/main/kotlin/com/buko/app/MainActivity.kt
+          sed 's/^package com\.buko\.buko$/package com.buko.app/' android/app/src/main/kotlin/com/buko/buko/MainActivity.kt > android/app/src/main/kotlin/com/buko/app/MainActivity.kt
           rm -rf android/app/src/main/kotlin/com/buko/buko
-          cat > android/gradle.properties <<'EOF'
-          org.gradle.jvmargs=-Xmx4096M -XX:MaxMetaspaceSize=1024M -Dfile.encoding=UTF-8
-          android.useAndroidX=true
-          android.enableJetifier=true
-          EOF
 
       - name: Configure Firebase Android services
         env:
@@ -57,16 +44,15 @@ jobs:
           python3 - <<'PY'
           import json, os
           from pathlib import Path
-
           data = {
             "project_info": {
-              "project_number": os.environ["FIREBASE_PROJECT_NUMBER"],
-              "project_id": os.environ["FIREBASE_PROJECT_ID"],
-              "storage_bucket": os.environ["FIREBASE_STORAGE_BUCKET"]
+              "project_number": "113136352409",
+              "project_id": "buko-6f769",
+              "storage_bucket": "buko-6f769.firebasestorage.app"
             },
             "client": [{
               "client_info": {
-                "mobilesdk_app_id": os.environ["FIREBASE_APP_ID"],
+                "mobilesdk_app_id": "1:113136352409:android:c568ce9556ae2af5dc0c08",
                 "android_client_info": {"package_name": "com.buko.app"}
               },
               "api_key": [{"current_key": os.environ["FIREBASE_API_KEY"]}]
@@ -79,9 +65,8 @@ jobs:
           from pathlib import Path
           p = Path('android/settings.gradle.kts')
           s = p.read_text()
-          marker = 'plugins {'
           if 'com.google.gms.google-services' not in s:
-              s = s.replace(marker, marker + '\n    id("com.google.gms.google-services") version "4.4.2" apply false', 1)
+              s = s.replace('plugins {', 'plugins {\n    id("com.google.gms.google-services") version "4.4.2" apply false', 1)
           p.write_text(s)
           p = Path('android/app/build.gradle.kts')
           s = p.read_text()
@@ -101,14 +86,10 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re
-
           p = Path('lib/main.dart')
           s = p.read_text()
-
           if "import 'admin_page.dart';" not in s:
               s = s.replace("import 'firebase_options.dart';\n", "import 'firebase_options.dart';\nimport 'admin_page.dart';\n", 1)
-
-          old = "class AccountPage extends StatelessWidget { const AccountPage({super.key}); @override Widget build(BuildContext context) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.person, size: 64), const SizedBox(height: 12), const Text('حساب BUKO', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), const SizedBox(height: 16), FilledButton.tonalIcon(onPressed: () => buko_service.FirebaseService.instance.signOut(), icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج'))])); }"
           new = """class AccountPage extends StatelessWidget {
   const AccountPage({super.key});
 
@@ -135,11 +116,7 @@ jobs:
     ])),
   );
 }"""
-          if old in s:
-              s = s.replace(old, new, 1)
-          else:
-              s = re.sub(r'class AccountPage extends StatelessWidget \{.*?\n\}', new, s, count=1, flags=re.S)
-
+          s = re.sub(r'class AccountPage extends StatelessWidget \{.*?\n\}', new, s, count=1, flags=re.S)
           p.write_text(s)
           PY
 
@@ -156,7 +133,6 @@ jobs:
           s = re.sub(r'(?<![\w.])FirebaseService\.instance', 'buko_service.FirebaseService.instance', s)
           p.write_text(s)
           PY
-          git diff -- lib/main.dart
           if ! git diff --quiet -- lib/main.dart; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

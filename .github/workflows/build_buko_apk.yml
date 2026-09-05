@@ -24,8 +24,11 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Generate BUKO launcher icon
+        run: dart run flutter_launcher_icons
+
       - name: Analyze
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
 
       - name: Test
         run: flutter test

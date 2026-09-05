@@ -25,20 +25,44 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
           p = Path('android/app/build.gradle')
           s = p.read_text()
           if 'compileOptions {' in s:
-              import re
               s = re.sub(r'compileOptions\s*\{.*?\n\s*\}', "compileOptions {\n        sourceCompatibility JavaVersion.VERSION_17\n        targetCompatibility JavaVersion.VERSION_17\n    }", s, count=1, flags=re.S)
           else:
               s = s.replace('android {', "android {\n    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_17\n        targetCompatibility JavaVersion.VERSION_17\n    }", 1)
           if 'kotlinOptions {' not in s:
               s = s.replace('android {', "android {\n    kotlinOptions {\n        jvmTarget = '17'\n    }", 1)
           else:
-              import re
               s = re.sub(r'kotlinOptions\s*\{.*?\n\s*\}', "kotlinOptions {\n        jvmTarget = '17'\n    }", s, count=1, flags=re.S)
           p.write_text(s)
           print('Configured Java and Kotlin JVM target to 17.')
+          PY
+
+      - name: Configure release signing
+        run: |
+          keytool -genkeypair -v \
+            -keystore android/buko-release.keystore \
+            -alias buko \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass changeit \
+            -keypass changeit \
+            -dname "CN=BUKO, OU=BUKO, O=BUKO, L=Khartoum, ST=Khartoum, C=SD"
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('android/app/build.gradle')
+          s = p.read_text()
+          marker = 'android {'
+          signing = '''android {\n    signingConfigs {\n        release {\n            storeFile file("../buko-release.keystore")\n            storePassword "changeit"\n            keyAlias "buko"\n            keyPassword "changeit"\n        }\n    }\n'''
+          s = s.replace(marker, signing, 1)
+          if 'signingConfig signingConfigs.release' in s:
+              pass
+          else:
+              s = s.replace('defaultConfig {', 'buildTypes {\n        release {\n            signingConfig signingConfigs.release\n        }\n    }\n\n    defaultConfig {', 1)
+          p.write_text(s)
           PY
 
       - name: Fix Gradle version for current Android Gradle Plugin
@@ -79,9 +103,17 @@ jobs:
       - name: Build APK
         run: flutter build apk --release
 
+      - name: Verify APK signature
+        run: |
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose "$APK"
+          unzip -l "$APK" | grep -E '\.(RSA|DSA|EC)$'
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: BUKO-APK
-          path: build/app/outputs/flutter-apk/*.apk
+          path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error

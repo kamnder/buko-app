@@ -50,7 +50,7 @@ class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
   @override
   Widget build(BuildContext context) => StreamBuilder<auth.User?>(
-        stream: buko_service.buko_service.FirebaseService.instance.authState,
+        stream: buko_service.FirebaseService.instance.authState,
         builder: (_, snap) => snap.data == null ? const PhoneAuthPage() : const HomeShell(),
       );
 }
@@ -88,23 +88,12 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
       setState(() => error = 'استخدم رقم السودان: +249XXXXXXXXX');
       return;
     }
-    setState(() {
-      loading = true;
-      error = '';
-    });
+    setState(() { loading = true; error = ''; });
     await auth.FirebaseAuth.instance.verifyPhoneNumber(
       phoneNumber: p,
-      verificationCompleted: (credential) async {
-        await auth.FirebaseAuth.instance.signInWithCredential(credential);
-      },
-      verificationFailed: (e) => setState(() {
-        loading = false;
-        error = e.message ?? 'تعذر إرسال رمز التحقق';
-      }),
-      codeSent: (id, _) => setState(() {
-        verificationId = id;
-        loading = false;
-      }),
+      verificationCompleted: (credential) async => auth.FirebaseAuth.instance.signInWithCredential(credential),
+      verificationFailed: (e) => setState(() { loading = false; error = e.message ?? 'تعذر إرسال رمز التحقق'; }),
+      codeSent: (id, _) => setState(() { verificationId = id; loading = false; }),
       codeAutoRetrievalTimeout: (id) => verificationId = id,
     );
   }
@@ -114,27 +103,18 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
       setState(() => error = 'أدخل رمز التحقق المرسل للهاتف');
       return;
     }
-    setState(() {
-      loading = true;
-      error = '';
-    });
+    setState(() { loading = true; error = ''; });
     try {
-      final credential = auth.PhoneAuthProvider.credential(
-        verificationId: verificationId!,
-        smsCode: code.text.trim(),
-      );
+      final credential = auth.PhoneAuthProvider.credential(verificationId: verificationId!, smsCode: code.text.trim());
       await auth.FirebaseAuth.instance.signInWithCredential(credential);
-      await buko_service.buko_service.FirebaseService.instance.saveUserProfile(
+      await buko_service.FirebaseService.instance.saveUserProfile(
         uid: auth.FirebaseAuth.instance.currentUser!.uid,
         name: 'مستخدم BUKO',
         phone: normalize(phone.text),
         role: 'buyer',
       );
     } on auth.FirebaseAuthException catch (e) {
-      setState(() {
-        loading = false;
-        error = e.message ?? 'رمز التحقق غير صحيح';
-      });
+      setState(() { loading = false; error = e.message ?? 'رمز التحقق غير صحيح'; });
     }
   }
 
@@ -148,58 +128,26 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
                 padding: const EdgeInsets.all(24),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 460),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.directions_car, size: 76, color: green),
+                  child: Column(children: [
+                    const Icon(Icons.directions_car, size: 76, color: green),
+                    const SizedBox(height: 12),
+                    const Text('BUKO', style: TextStyle(fontSize: 40, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 8),
+                    const Text('سوق السيارات السوداني', style: TextStyle(fontSize: 17)),
+                    const SizedBox(height: 30),
+                    Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(children: [
+                      TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'رقم الهاتف السوداني', hintText: '+249XXXXXXXXX', prefixIcon: Icon(Icons.phone))),
                       const SizedBox(height: 12),
-                      const Text('BUKO', style: TextStyle(fontSize: 40, fontWeight: FontWeight.w900)),
-                      const SizedBox(height: 8),
-                      const Text('سوق السيارات السوداني', style: TextStyle(fontSize: 17)),
-                      const SizedBox(height: 30),
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            children: [
-                              TextField(
-                                controller: phone,
-                                keyboardType: TextInputType.phone,
-                                decoration: const InputDecoration(
-                                  labelText: 'رقم الهاتف السوداني',
-                                  hintText: '+249XXXXXXXXX',
-                                  prefixIcon: Icon(Icons.phone),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              if (verificationId != null)
-                                TextField(
-                                  controller: code,
-                                  keyboardType: TextInputType.number,
-                                  decoration: const InputDecoration(
-                                    labelText: 'رمز التحقق SMS',
-                                    prefixIcon: Icon(Icons.sms),
-                                  ),
-                                ),
-                              const SizedBox(height: 16),
-                              SizedBox(
-                                width: double.infinity,
-                                child: FilledButton.icon(
-                                  onPressed: loading ? null : (verificationId == null ? sendCode : verify),
-                                  icon: Icon(verificationId == null ? Icons.sms_outlined : Icons.verified_outlined),
-                                  label: Text(loading ? 'جارٍ التنفيذ...' : verificationId == null ? 'إرسال رمز التحقق' : 'تأكيد وتسجيل الدخول'),
-                                ),
-                              ),
-                              if (error.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 12),
-                                  child: Text(error, style: const TextStyle(color: Colors.redAccent), textAlign: TextAlign.center),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                      if (verificationId != null) TextField(controller: code, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'رمز التحقق SMS', prefixIcon: Icon(Icons.sms))),
+                      const SizedBox(height: 16),
+                      SizedBox(width: double.infinity, child: FilledButton.icon(
+                        onPressed: loading ? null : (verificationId == null ? sendCode : verify),
+                        icon: Icon(verificationId == null ? Icons.sms_outlined : Icons.verified_outlined),
+                        label: Text(loading ? 'جارٍ التنفيذ...' : verificationId == null ? 'إرسال رمز التحقق' : 'تأكيد وتسجيل الدخول'),
+                      )),
+                      if (error.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 12), child: Text(error, style: const TextStyle(color: Colors.redAccent), textAlign: TextAlign.center)),
+                    ]))),
+                  ]),
                 ),
               ),
             ),
@@ -243,316 +191,110 @@ class HomePage extends StatelessWidget {
   const HomePage({super.key});
   @override
   Widget build(BuildContext context) => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: buko_service.buko_service.FirebaseService.instance.watchCars(),
+        stream: buko_service.FirebaseService.instance.watchCars(),
         builder: (_, snap) {
           final docs = snap.data?.docs ?? [];
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              const Text('أهلاً بك في BUKO 👋', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              const Text('ابحث عن سيارتك أو اعرض سيارتك للبيع.'),
-              const SizedBox(height: 20),
-              if (snap.hasError)
-                const Text('تعذر تحميل السيارات. تأكد من إعداد Firestore.', style: TextStyle(color: Colors.orangeAccent)),
-              if (docs.isEmpty && !snap.hasError)
-                const Card(child: Padding(padding: EdgeInsets.all(24), child: Text('لا توجد إعلانات منشورة بعد. كن أول من يضيف سيارة!'))),
-              ...docs.map((d) => CarCard(data: d.data(), id: d.id)),
-            ],
-          );
+          return ListView(padding: const EdgeInsets.all(16), children: [
+            const Text('أهلاً بك في BUKO 👋', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8), const Text('ابحث عن سيارتك أو اعرض سيارتك للبيع.'), const SizedBox(height: 20),
+            if (snap.hasError) const Text('تعذر تحميل السيارات. تأكد من إعداد Firestore.', style: TextStyle(color: Colors.orangeAccent)),
+            if (docs.isEmpty && !snap.hasError) const Card(child: Padding(padding: EdgeInsets.all(24), child: Text('لا توجد إعلانات منشورة بعد. كن أول من يضيف سيارة!'))),
+            ...docs.map((d) => CarCard(data: d.data(), id: d.id)),
+          ]);
         },
       );
 }
 
 class ExplorePage extends StatefulWidget {
   const ExplorePage({super.key});
-  @override
-  State<ExplorePage> createState() => _ExplorePageState();
+  @override State<ExplorePage> createState() => _ExplorePageState();
 }
-
 class _ExplorePageState extends State<ExplorePage> {
   String query = '';
   @override
   Widget build(BuildContext context) => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: buko_service.buko_service.FirebaseService.instance.watchCars(),
-        builder: (_, snap) {
-          final docs = (snap.data?.docs ?? []).where((d) {
-            final q = query.toLowerCase();
-            final x = d.data();
-            return q.isEmpty || '${x['name']} ${x['city']} ${x['type']}'.toLowerCase().contains(q);
-          }).toList();
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              const Text('استكشاف السيارات', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 14),
-              TextField(
-                onChanged: (v) => setState(() => query = v),
-                decoration: const InputDecoration(hintText: 'ابحث بالاسم أو المدينة أو النوع', prefixIcon: Icon(Icons.search)),
-              ),
-              const SizedBox(height: 14),
-              ...docs.map((d) => CarCard(data: d.data(), id: d.id)),
-            ],
-          );
-        },
-      );
+    stream: buko_service.FirebaseService.instance.watchCars(),
+    builder: (_, snap) {
+      final docs = (snap.data?.docs ?? []).where((d) {
+        final q = query.toLowerCase(); final x = d.data();
+        return q.isEmpty || '${x['name']} ${x['city']} ${x['type']}'.toLowerCase().contains(q);
+      }).toList();
+      return ListView(padding: const EdgeInsets.all(16), children: [
+        const Text('استكشاف السيارات', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)), const SizedBox(height: 14),
+        TextField(onChanged: (v) => setState(() => query = v), decoration: const InputDecoration(hintText: 'ابحث بالاسم أو المدينة أو النوع', prefixIcon: Icon(Icons.search))),
+        const SizedBox(height: 14), ...docs.map((d) => CarCard(data: d.data(), id: d.id)),
+      ]);
+    });
 }
 
 class CarCard extends StatelessWidget {
-  final Map<String, dynamic> data;
-  final String id;
+  final Map<String, dynamic> data; final String id;
   const CarCard({super.key, required this.data, required this.id});
   @override
   Widget build(BuildContext context) {
     final images = List<String>.from(data['imageUrls'] ?? const []);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: images.isEmpty
-            ? const CircleAvatar(child: Icon(Icons.directions_car))
-            : ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.network(images.first, width: 62, height: 62, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.directions_car)),
-              ),
-        title: Text('${data['name'] ?? 'سيارة'} • ${data['year'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('${data['price'] ?? ''} • ${data['city'] ?? ''}\n${data['type'] ?? ''}'),
-        isThreeLine: true,
-        trailing: IconButton(
-          icon: const Icon(Icons.shopping_bag_outlined),
-          onPressed: () async {
-            final seller = data['sellerId'];
-            if (seller == null) return;
-            try {
-              await buko_service.buko_service.FirebaseService.instance.createPurchaseRequest(carId: id, sellerId: seller);
-              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب الشراء ✓')));
-            } catch (e) {
-              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال الطلب: $e')));
-            }
-          },
-        ),
-      ),
-    );
+    return Card(margin: const EdgeInsets.only(bottom: 12), child: ListTile(
+      leading: images.isEmpty ? const CircleAvatar(child: Icon(Icons.directions_car)) : ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(images.first, width: 62, height: 62, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.directions_car))),
+      title: Text('${data['name'] ?? 'سيارة'} • ${data['year'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.bold)),
+      subtitle: Text('${data['price'] ?? ''} • ${data['city'] ?? ''}\n${data['type'] ?? ''}'), isThreeLine: true,
+      trailing: IconButton(icon: const Icon(Icons.shopping_bag_outlined), onPressed: () async {
+        final seller = data['sellerId']; if (seller == null) return;
+        try {
+          await buko_service.FirebaseService.instance.createPurchaseRequest(carId: id, sellerId: seller);
+          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب الشراء ✓')));
+        } catch (e) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال الطلب: $e'))); }
+      }),
+    ));
   }
 }
 
-class SellPage extends StatefulWidget {
-  const SellPage({super.key});
-  @override
-  State<SellPage> createState() => _SellPageState();
-}
-
+class SellPage extends StatefulWidget { const SellPage({super.key}); @override State<SellPage> createState() => _SellPageState(); }
 class _SellPageState extends State<SellPage> {
-  final name = TextEditingController();
-  final year = TextEditingController();
-  final price = TextEditingController();
-  final city = TextEditingController();
-  final picker = ImagePicker();
-  String type = 'سيدان';
-  bool loading = false;
-  bool picking = false;
-  final List<XFile> selectedImages = [];
-
-  @override
-  void dispose() {
-    name.dispose();
-    year.dispose();
-    price.dispose();
-    city.dispose();
-    super.dispose();
-  }
-
+  final name = TextEditingController(), year = TextEditingController(), price = TextEditingController(), city = TextEditingController();
+  final picker = ImagePicker(); String type = 'سيدان'; bool loading = false, picking = false; final List<XFile> selectedImages = [];
+  @override void dispose() { name.dispose(); year.dispose(); price.dispose(); city.dispose(); super.dispose(); }
   Future<void> pickImages() async {
-    if (picking) return;
-    setState(() => picking = true);
+    if (picking) return; setState(() => picking = true);
     try {
-      final images = await picker.pickMultiImage(imageQuality: 82, maxWidth: 1600);
-      if (!mounted) return;
-      setState(() {
-        for (final image in images) {
-          if (selectedImages.length >= 8) break;
-          if (!selectedImages.any((x) => x.path == image.path)) selectedImages.add(image);
-        }
-      });
-      if (images.length > 8 && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الحد الأقصى 8 صور للإعلان')));
-      }
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر اختيار الصور: $e')));
-    } finally {
-      if (mounted) setState(() => picking = false);
-    }
+      final images = await picker.pickMultiImage(imageQuality: 82, maxWidth: 1600); if (!mounted) return;
+      setState(() { for (final image in images) { if (selectedImages.length >= 8) break; if (!selectedImages.any((x) => x.path == image.path)) selectedImages.add(image); } });
+      if (images.length > 8 && mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الحد الأقصى 8 صور للإعلان')));
+    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر اختيار الصور: $e'))); }
+    finally { if (mounted) setState(() => picking = false); }
   }
-
   void removeImage(int index) => setState(() => selectedImages.removeAt(index));
-
   Future<List<String>> uploadImages() async {
     final urls = <String>[];
     for (var i = 0; i < selectedImages.length; i++) {
-      final image = selectedImages[i];
-      final Uint8List bytes = await image.readAsBytes();
-      final url = await buko_service.buko_service.FirebaseService.instance.uploadCarImage(bytes, '${DateTime.now().millisecondsSinceEpoch}_$i.jpg');
-      urls.add(url);
+      final bytes = await selectedImages[i].readAsBytes();
+      urls.add(await buko_service.FirebaseService.instance.uploadCarImage(bytes, '${DateTime.now().millisecondsSinceEpoch}_$i.jpg'));
     }
     return urls;
   }
-
   Future<void> submit() async {
-    if (name.text.trim().isEmpty || int.tryParse(year.text) == null || price.text.trim().isEmpty || city.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أكمل بيانات السيارة أولاً')));
-      return;
-    }
-    if (selectedImages.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أضف صورة واحدة على الأقل للسيارة')));
-      return;
-    }
+    if (name.text.trim().isEmpty || int.tryParse(year.text) == null || price.text.trim().isEmpty || city.text.trim().isEmpty) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أكمل بيانات السيارة أولاً'))); return; }
+    if (selectedImages.isEmpty) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أضف صورة واحدة على الأقل للسيارة'))); return; }
     setState(() => loading = true);
     try {
       final urls = await uploadImages();
-      await buko_service.buko_service.FirebaseService.instance.submitCar(
-        name: name.text,
-        year: int.parse(year.text),
-        price: price.text,
-        city: city.text,
-        type: type,
-        imageUrls: urls,
-      );
-      name.clear();
-      year.clear();
-      price.clear();
-      city.clear();
-      setState(() => selectedImages.clear());
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم رفع الصور وإرسال الإعلان للمراجعة ✓')));
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال الإعلان: $e')));
-    } finally {
-      if (mounted) setState(() => loading = false);
-    }
+      await buko_service.FirebaseService.instance.submitCar(name: name.text, year: int.parse(year.text), price: price.text, city: city.text, type: type, imageUrls: urls);
+      if (mounted) { name.clear(); year.clear(); price.clear(); city.clear(); setState(() => selectedImages.clear()); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ الإعلان للمراجعة ✓'))); }
+    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر نشر الإعلان: $e'))); }
+    finally { if (mounted) setState(() => loading = false); }
   }
-
-  Widget imageGrid() => Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: selectedImages.asMap().entries.map(
-              (entry) => Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.file(File(entry.value.path), width: 82, height: 82, fit: BoxFit.cover),
-                  ),
-                  Positioned(
-                    top: -7,
-                    right: -7,
-                    child: InkWell(
-                      onTap: () => removeImage(entry.key),
-                      child: const CircleAvatar(radius: 12, child: Icon(Icons.close, size: 15)),
-                    ),
-                  ),
-                ],
-              ),
-            ).toList(),
-      );
-
   @override
-  Widget build(BuildContext context) => ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Text('بيع سيارتك', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          const Text('أضف صورًا واضحة للسيارة لزيادة فرصة البيع.'),
-          const SizedBox(height: 14),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Expanded(child: Text('صور السيارة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
-                      Text('${selectedImages.length}/8'),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  if (selectedImages.isNotEmpty) imageGrid(),
-                  if (selectedImages.isNotEmpty) const SizedBox(height: 10),
-                  OutlinedButton.icon(
-                    onPressed: loading || picking || selectedImages.length >= 8 ? null : pickImages,
-                    icon: const Icon(Icons.photo_library_outlined),
-                    label: Text(picking ? 'جارٍ اختيار الصور...' : 'اختيار صور من الهاتف'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم السيارة')),
-          const SizedBox(height: 10),
-          TextField(controller: year, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'السنة')),
-          const SizedBox(height: 10),
-          TextField(controller: price, decoration: const InputDecoration(labelText: 'السعر')),
-          const SizedBox(height: 10),
-          TextField(controller: city, decoration: const InputDecoration(labelText: 'المدينة')),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<String>(
-            initialValue: type,
-            items: const [
-              DropdownMenuItem(value: 'سيدان', child: Text('سيدان')),
-              DropdownMenuItem(value: 'دفع رباعي', child: Text('دفع رباعي')),
-              DropdownMenuItem(value: 'هاتشباك', child: Text('هاتشباك')),
-              DropdownMenuItem(value: 'بيك أب', child: Text('بيك أب')),
-            ],
-            onChanged: loading ? null : (v) => setState(() => type = v ?? type),
-            decoration: const InputDecoration(labelText: 'النوع'),
-          ),
-          const SizedBox(height: 18),
-          FilledButton.icon(
-            onPressed: loading ? null : submit,
-            icon: Icon(loading ? Icons.cloud_upload : Icons.publish),
-            label: Text(loading ? 'جارٍ رفع الصور وإرسال الإعلان...' : 'رفع الإعلان للمراجعة'),
-          ),
-        ],
-      );
+  Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
+    const Text('بيع سيارتك', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)), const SizedBox(height: 16),
+    TextField(controller: name, decoration: const InputDecoration(labelText: 'الماركة والموديل')), const SizedBox(height: 10),
+    TextField(controller: year, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'سنة الصنع')), const SizedBox(height: 10),
+    TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'السعر')), const SizedBox(height: 10),
+    TextField(controller: city, decoration: const InputDecoration(labelText: 'المدينة')), const SizedBox(height: 10),
+    DropdownButtonFormField<String>(value: type, items: const ['سيدان', 'دفع رباعي', 'هاتشباك', 'بيك أب', 'باص'].map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(), onChanged: (v) => setState(() => type = v ?? type), decoration: const InputDecoration(labelText: 'نوع السيارة')), const SizedBox(height: 16),
+    OutlinedButton.icon(onPressed: picking ? null : pickImages, icon: const Icon(Icons.photo_library_outlined), label: Text(picking ? 'جارٍ اختيار الصور...' : 'اختيار صور السيارة (حتى 8)')),
+    if (selectedImages.isNotEmpty) ...[const SizedBox(height: 12), SizedBox(height: 100, child: ListView.separated(scrollDirection: Axis.horizontal, itemCount: selectedImages.length, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (_, i) => Stack(children: [ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.file(File(selectedImages[i].path), width: 100, height: 100, fit: BoxFit.cover)), Positioned(top: 2, right: 2, child: InkWell(onTap: () => removeImage(i), child: const CircleAvatar(radius: 12, child: Icon(Icons.close, size: 15))))]))),],
+    const SizedBox(height: 18), FilledButton.icon(onPressed: loading ? null : submit, icon: const Icon(Icons.publish), label: Text(loading ? 'جارٍ رفع الإعلان...' : 'نشر الإعلان للمراجعة')),
+  ]);
 }
 
-class FavoritesPage extends StatelessWidget {
-  const FavoritesPage({super.key});
-  @override
-  Widget build(BuildContext context) => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text('المفضلة\nسيتم ربط حفظ السيارات بحسابك في الخطوة التالية.', textAlign: TextAlign.center),
-        ),
-      );
-}
-
-class AccountPage extends StatelessWidget {
-  const AccountPage({super.key});
-  @override
-  Widget build(BuildContext context) => FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        future: FirebaseFirestore.instance.collection('users').doc(auth.FirebaseAuth.instance.currentUser!.uid).get(),
-        builder: (_, snap) {
-          final d = snap.data?.data();
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              const Text('حسابي', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 18),
-              Card(
-                child: ListTile(
-                  leading: const CircleAvatar(child: Icon(Icons.person)),
-                  title: Text(d?['name'] ?? 'مستخدم BUKO'),
-                  subtitle: Text(d?['phone'] ?? auth.FirebaseAuth.instance.currentUser?.phoneNumber ?? ''),
-                ),
-              ),
-              const SizedBox(height: 16),
-              FilledButton.tonalIcon(
-                onPressed: () => buko_service.buko_service.FirebaseService.instance.signOut(),
-                icon: const Icon(Icons.logout),
-                label: const Text('تسجيل الخروج'),
-              ),
-            ],
-          );
-        },
-      );
-}
+class FavoritesPage extends StatelessWidget { const FavoritesPage({super.key}); @override Widget build(BuildContext context) => const Center(child: Text('المفضلة — ستتم مزامنتها مع Firebase في الخطوة التالية')); }
+class AccountPage extends StatelessWidget { const AccountPage({super.key}); @override Widget build(BuildContext context) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.person, size: 64), const SizedBox(height: 12), const Text('حساب BUKO', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), const SizedBox(height: 16), FilledButton.tonalIcon(onPressed: () => buko_service.FirebaseService.instance.signOut(), icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج'))])); }

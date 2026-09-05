@@ -19,6 +19,10 @@ jobs:
           cache: true
       - name: Create Android platform files
         run: flutter create --platforms=android .
+      - name: Remove generated Kotlin DSL duplicates
+        run: |
+          rm -f android/settings.gradle.kts android/build.gradle.kts android/app/build.gradle.kts
+          rm -f android/app/src/main/kotlin/com/buko/buko/MainActivity.kt
       - name: Fix Gradle version
         run: sed -i 's#gradle-[0-9.]*-bin.zip#gradle-9.3.1-bin.zip#' android/gradle/wrapper/gradle-wrapper.properties
       - name: Get dependencies
@@ -39,9 +43,11 @@ jobs:
           APK=build/app/outputs/flutter-apk/app-release.apk
           test -s "$APK"
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+          ZIPALIGN=$(find "$ANDROID_HOME/build-tools" -name zipalign -type f | sort -V | tail -n 1)
           test -n "$APKSIGNER"
+          test -n "$ZIPALIGN"
           "$APKSIGNER" verify --verbose "$APK"
-          "$APKSIGNER" verify --print-certs "$APK"
+          "$ZIPALIGN" -c -v 4 "$APK"
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:

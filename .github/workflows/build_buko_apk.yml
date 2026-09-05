@@ -26,7 +26,7 @@ jobs:
       - name: Generate launcher icon
         run: dart run flutter_launcher_icons
       - name: Remove unused math import
-        run: sed -i "/import 'dart:math';/d" lib/main.dart
+        run: sed -i -E "/import 'dart:math'( as math)?;/d" lib/main.dart
       - name: Analyze
         run: flutter analyze --no-fatal-infos
       - name: Test
@@ -39,6 +39,7 @@ jobs:
           APK=build/app/outputs/flutter-apk/app-release.apk
           test -s "$APK"
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+          test -n "$APKSIGNER"
           "$APKSIGNER" verify --verbose "$APK"
           "$APKSIGNER" verify --print-certs "$APK"
       - name: Upload APK

@@ -21,6 +21,26 @@ jobs:
       - name: Create Android platform files
         run: flutter create --platforms=android .
 
+      - name: Fix Android Java/Kotlin compatibility
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('android/app/build.gradle')
+          s = p.read_text()
+          if 'compileOptions {' in s:
+              import re
+              s = re.sub(r'compileOptions\s*\{.*?\n\s*\}', "compileOptions {\n        sourceCompatibility JavaVersion.VERSION_17\n        targetCompatibility JavaVersion.VERSION_17\n    }", s, count=1, flags=re.S)
+          else:
+              s = s.replace('android {', "android {\n    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_17\n        targetCompatibility JavaVersion.VERSION_17\n    }", 1)
+          if 'kotlinOptions {' not in s:
+              s = s.replace('android {', "android {\n    kotlinOptions {\n        jvmTarget = '17'\n    }", 1)
+          else:
+              import re
+              s = re.sub(r'kotlinOptions\s*\{.*?\n\s*\}', "kotlinOptions {\n        jvmTarget = '17'\n    }", s, count=1, flags=re.S)
+          p.write_text(s)
+          print('Configured Java and Kotlin JVM target to 17.')
+          PY
+
       - name: Fix Gradle version for current Android Gradle Plugin
         run: |
           sed -i 's#gradle-[0-9.]*-bin.zip#gradle-9.3.1-bin.zip#' android/gradle/wrapper/gradle-wrapper.properties

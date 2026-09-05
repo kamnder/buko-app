@@ -1,15 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430">
   <defs>
-    <linearGradient id="body" x1="0" x2="1"><stop offset="0" stop-color="#071A2A"/><stop offset="1" stop-color="#123B55"/></linearGradient>
+    <linearGradient id="car" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#06192A"/><stop offset="0.58" stop-color="#0A3047"/><stop offset="1" stop-color="#102C40"/></linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#16A34A"/><stop offset="1" stop-color="#39C86A"/></linearGradient>
   </defs>
-  <rect width="900" height="430" rx="34" fill="#000000"/>
-  <g transform="translate(40 45)">
-    <path d="M55 250 C72 170 150 130 250 130 L565 130 C640 130 690 155 735 205 L805 225 C830 232 842 248 842 270 L842 292 L55 292 Z" fill="url(#body)" stroke="#1E4965" stroke-width="8"/>
-    <path d="M235 130 L285 70 C300 52 324 42 350 42 L530 42 C580 42 620 64 657 108 L676 130 Z" fill="#081D2C" stroke="#1E4965" stroke-width="8"/>
-    <path d="M300 112 L330 76 C339 65 351 60 366 60 L500 60 C526 60 551 70 570 88 L592 112 Z" fill="#000000" stroke="#294D63" stroke-width="5"/>
-    <circle cx="185" cy="292" r="62" fill="#071A2A" stroke="#173A52" stroke-width="14"/><circle cx="185" cy="292" r="28" fill="#000" stroke="#294D63" stroke-width="7"/>
-    <circle cx="700" cy="292" r="62" fill="#071A2A" stroke="#173A52" stroke-width="14"/><circle cx="700" cy="292" r="28" fill="#000" stroke="#294D63" stroke-width="7"/>
-    <text x="405" y="270" text-anchor="middle" direction="rtl" unicode-bidi="bidi-override" font-family="Arial, sans-serif" font-size="145" font-weight="900" fill="#16A34A">سوق</text>
+  <rect width="900" height="430" rx="32" fill="#000"/>
+  <g transform="translate(35 28)">
+    <path d="M32 270 C48 202 104 157 188 146 L252 73 C270 53 296 43 325 43 L517 43 C572 43 621 63 661 103 L714 156 L786 180 C818 191 838 215 842 245 L842 278 L32 278 Z" fill="url(#car)" stroke="#173D56" stroke-width="10"/>
+    <path d="M278 135 L312 92 C322 80 338 72 357 72 L493 72 C529 72 558 84 583 108 L609 135 Z" fill="#000" stroke="#284B61" stroke-width="7"/>
+    <path d="M43 231 C115 208 180 201 259 201 L662 201" fill="none" stroke="#163A50" stroke-width="8"/>
+    <circle cx="184" cy="278" r="69" fill="#06192A" stroke="#173D56" stroke-width="16"/><circle cx="184" cy="278" r="31" fill="#000" stroke="#284B61" stroke-width="8"/>
+    <circle cx="692" cy="278" r="69" fill="#06192A" stroke="#173D56" stroke-width="16"/><circle cx="692" cy="278" r="31" fill="#000" stroke="#284B61" stroke-width="8"/>
+    <text x="493" y="264" text-anchor="middle" direction="rtl" unicode-bidi="bidi-override" font-family="Arial, sans-serif" font-size="158" font-weight="900" fill="url(#green)">سوق</text>
   </g>
   <text x="450" y="405" text-anchor="middle" direction="rtl" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#EAF2F7">السوق الأول للسيارات المستعملة في السودان</text>
 </svg>

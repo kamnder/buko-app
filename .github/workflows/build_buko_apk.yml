@@ -3,8 +3,7 @@ name: Build BUKO APK
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   contents: write
@@ -22,124 +21,21 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Create a clean Android platform
+      - name: Create Android platform
         run: |
           rm -rf android
           flutter create --platforms=android --org com.buko .
-
-      - name: Configure Android package
-        run: |
           sed -i 's/namespace = "com\.buko\.buko"/namespace = "com.buko.app"/' android/app/build.gradle.kts
           sed -i 's/applicationId = "com\.buko\.buko"/applicationId = "com.buko.app"/' android/app/build.gradle.kts
           mkdir -p android/app/src/main/kotlin/com/buko/app
           sed 's/^package com\.buko\.buko$/package com.buko.app/' android/app/src/main/kotlin/com/buko/buko/MainActivity.kt > android/app/src/main/kotlin/com/buko/app/MainActivity.kt
           rm -rf android/app/src/main/kotlin/com/buko/buko
 
-      - name: Configure Firebase Android services
-        env:
-          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
-        run: |
-          set -euo pipefail
-          test -n "$FIREBASE_API_KEY"
-          python3 - <<'PY'
-          import json, os
-          from pathlib import Path
-          data = {
-            "project_info": {
-              "project_number": "113136352409",
-              "project_id": "buko-6f769",
-              "storage_bucket": "buko-6f769.firebasestorage.app"
-            },
-            "client": [{
-              "client_info": {
-                "mobilesdk_app_id": "1:113136352409:android:c568ce9556ae2af5dc0c08",
-                "android_client_info": {"package_name": "com.buko.app"}
-              },
-              "api_key": [{"current_key": os.environ["FIREBASE_API_KEY"]}]
-            }],
-            "configuration_version": "1"
-          }
-          Path("android/app/google-services.json").write_text(json.dumps(data, indent=2) + "\n")
-          PY
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('android/settings.gradle.kts')
-          s = p.read_text()
-          if 'com.google.gms.google-services' not in s:
-              s = s.replace('plugins {', 'plugins {\n    id("com.google.gms.google-services") version "4.4.2" apply false', 1)
-          p.write_text(s)
-          p = Path('android/app/build.gradle.kts')
-          s = p.read_text()
-          if 'id("com.google.gms.google-services")' not in s:
-              s = s.replace('plugins {', 'plugins {\n    id("com.google.gms.google-services")', 1)
-          p.write_text(s)
-          PY
-
       - name: Get dependencies
         run: flutter pub get
 
       - name: Generate launcher icon
         run: dart run flutter_launcher_icons
-
-      - name: Wire application features
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          p = Path('lib/main.dart')
-          s = p.read_text()
-          if "import 'admin_page.dart';" not in s:
-              s = s.replace("import 'firebase_options.dart';\n", "import 'firebase_options.dart';\nimport 'admin_page.dart';\n", 1)
-          new = """class AccountPage extends StatelessWidget {
-  const AccountPage({super.key});
-
-  Future<bool> _isAdmin() async {
-    final user = auth.FirebaseAuth.instance.currentUser;
-    if (user == null) return false;
-    final result = await user.getIdTokenResult();
-    return result.claims?['admin'] == true;
-  }
-
-  @override
-  Widget build(BuildContext context) => FutureBuilder<bool>(
-    future: _isAdmin(),
-    builder: (_, snap) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.person, size: 64),
-      const SizedBox(height: 12),
-      const Text('حساب BUKO', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-      const SizedBox(height: 16),
-      if (snap.data == true) ...[
-        FilledButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminPage())), icon: const Icon(Icons.admin_panel_settings), label: const Text('لوحة تحكم الإدارة')),
-        const SizedBox(height: 10),
-      ],
-      FilledButton.tonalIcon(onPressed: () => buko_service.FirebaseService.instance.signOut(), icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج')),
-    ])),
-  );
-}"""
-          s = re.sub(r'class AccountPage extends StatelessWidget \{.*?\n\}', new, s, count=1, flags=re.S)
-          p.write_text(s)
-          PY
-
-      - name: Fix Dart imports
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          p = Path('lib/main.dart')
-          s = p.read_text()
-          s = re.sub(r"^import 'dart:typed_data';\n", '', s, flags=re.MULTILINE)
-          s = re.sub(r"^import 'services/firebase_service.dart';\n", "import 'services/firebase_service.dart' as buko_service;\n", s, flags=re.MULTILINE)
-          s = s.replace('buko_service.buko_service.FirebaseService.instance', 'buko_service.FirebaseService.instance')
-          s = re.sub(r'(?<![\w.])FirebaseService\.instance', 'buko_service.FirebaseService.instance', s)
-          p.write_text(s)
-          PY
-          if ! git diff --quiet -- lib/main.dart; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add lib/main.dart
-            git commit -m "feat: wire admin dashboard into account"
-            git push
-          fi
 
       - name: Analyze
         run: flutter analyze --no-fatal-infos
@@ -157,8 +53,6 @@ jobs:
           test -s "$APK"
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
           ZIPALIGN=$(find "$ANDROID_HOME/build-tools" -name zipalign -type f | sort -V | tail -n 1)
-          test -n "$APKSIGNER"
-          test -n "$ZIPALIGN"
           "$APKSIGNER" verify --verbose "$APK"
           "$ZIPALIGN" -c -v 4 "$APK"
 

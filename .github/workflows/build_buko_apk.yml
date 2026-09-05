@@ -56,11 +56,9 @@ jobs:
           import re
           p = Path('lib/main.dart')
           s = p.read_text()
-          if "import 'dart:typed_data';" not in s:
-              s = s.replace("import 'dart:io';", "import 'dart:io';\nimport 'dart:typed_data';", 1)
           s = s.replace("import 'services/firebase_service.dart';", "import 'services/firebase_service.dart' as buko_service;")
           s = s.replace('buko_service.buko_service.FirebaseService.instance', 'buko_service.FirebaseService.instance')
-          s = re.sub(r'(?<![\\w.])FirebaseService\\.instance', 'buko_service.FirebaseService.instance', s)
+          s = re.sub(r'(?<![\w.])FirebaseService\.instance', 'buko_service.FirebaseService.instance', s)
           p.write_text(s)
           PY
           git diff -- lib/main.dart

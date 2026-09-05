@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'firebase_options.dart';
 import 'admin_page.dart';
+import 'phone_password_auth_page.dart';
 import 'services/firebase_service.dart' as buko_service;
 
 const green = Color(0xFF22C55E);
@@ -51,108 +52,7 @@ class AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) => StreamBuilder<auth.User?>(
         stream: buko_service.FirebaseService.instance.authState,
-        builder: (_, snap) => snap.data == null ? const PhoneAuthPage() : const HomeShell(),
-      );
-}
-
-class PhoneAuthPage extends StatefulWidget {
-  const PhoneAuthPage({super.key});
-  @override
-  State<PhoneAuthPage> createState() => _PhoneAuthPageState();
-}
-
-class _PhoneAuthPageState extends State<PhoneAuthPage> {
-  final phone = TextEditingController();
-  final code = TextEditingController();
-  String? verificationId;
-  bool loading = false;
-  String error = '';
-
-  @override
-  void dispose() {
-    phone.dispose();
-    code.dispose();
-    super.dispose();
-  }
-
-  String normalize(String value) {
-    var p = value.trim().replaceAll(' ', '');
-    if (p.startsWith('00249')) p = '+${p.substring(2)}';
-    if (p.startsWith('249')) p = '+$p';
-    return p;
-  }
-
-  Future<void> sendCode() async {
-    final p = normalize(phone.text);
-    if (!RegExp(r'^\+249\d{9}$').hasMatch(p)) {
-      setState(() => error = 'استخدم رقم السودان: +249XXXXXXXXX');
-      return;
-    }
-    setState(() { loading = true; error = ''; });
-    await auth.FirebaseAuth.instance.verifyPhoneNumber(
-      phoneNumber: p,
-      verificationCompleted: (credential) async => auth.FirebaseAuth.instance.signInWithCredential(credential),
-      verificationFailed: (e) => setState(() { loading = false; error = e.message ?? 'تعذر إرسال رمز التحقق'; }),
-      codeSent: (id, _) => setState(() { verificationId = id; loading = false; }),
-      codeAutoRetrievalTimeout: (id) => verificationId = id,
-    );
-  }
-
-  Future<void> verify() async {
-    if (verificationId == null || code.text.trim().length < 6) {
-      setState(() => error = 'أدخل رمز التحقق المرسل للهاتف');
-      return;
-    }
-    setState(() { loading = true; error = ''; });
-    try {
-      final credential = auth.PhoneAuthProvider.credential(verificationId: verificationId!, smsCode: code.text.trim());
-      await auth.FirebaseAuth.instance.signInWithCredential(credential);
-      await buko_service.FirebaseService.instance.saveUserProfile(
-        uid: auth.FirebaseAuth.instance.currentUser!.uid,
-        name: 'مستخدم BUKO',
-        phone: normalize(phone.text),
-        role: 'buyer',
-      );
-    } on auth.FirebaseAuthException catch (e) {
-      setState(() { loading = false; error = e.message ?? 'رمز التحقق غير صحيح'; });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: Scaffold(
-          body: SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 460),
-                  child: Column(children: [
-                    const Icon(Icons.directions_car, size: 76, color: green),
-                    const SizedBox(height: 12),
-                    const Text('BUKO', style: TextStyle(fontSize: 40, fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 8),
-                    const Text('سوق السيارات السوداني', style: TextStyle(fontSize: 17)),
-                    const SizedBox(height: 30),
-                    Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(children: [
-                      TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'رقم الهاتف السوداني', hintText: '+249XXXXXXXXX', prefixIcon: Icon(Icons.phone))),
-                      const SizedBox(height: 12),
-                      if (verificationId != null) TextField(controller: code, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'رمز التحقق SMS', prefixIcon: Icon(Icons.sms))),
-                      const SizedBox(height: 16),
-                      SizedBox(width: double.infinity, child: FilledButton.icon(
-                        onPressed: loading ? null : (verificationId == null ? sendCode : verify),
-                        icon: Icon(verificationId == null ? Icons.sms_outlined : Icons.verified_outlined),
-                        label: Text(loading ? 'جارٍ التنفيذ...' : verificationId == null ? 'إرسال رمز التحقق' : 'تأكيد وتسجيل الدخول'),
-                      )),
-                      if (error.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 12), child: Text(error, style: const TextStyle(color: Colors.redAccent), textAlign: TextAlign.center)),
-                    ]))),
-                  ]),
-                ),
-              ),
-            ),
-          ),
-        ),
+        builder: (_, snap) => snap.data == null ? const PhonePasswordAuthPage() : const HomeShell(),
       );
 }
 

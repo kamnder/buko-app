@@ -6,6 +6,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -48,8 +51,26 @@ jobs:
       - name: Generate launcher icon
         run: dart run flutter_launcher_icons
 
-      - name: Remove unused math import
-        run: sed -i -E "/import 'dart:math'( as math)?;/d" lib/main.dart
+      - name: Fix Dart imports
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('lib/main.dart')
+          s = p.read_text()
+          if "import 'dart:typed_data';" not in s:
+              s = s.replace("import 'dart:io';", "import 'dart:io';\nimport 'dart:typed_data';", 1)
+          s = s.replace("import 'services/firebase_service.dart';", "import 'services/firebase_service.dart' as buko_service;")
+          s = s.replace('FirebaseService.instance', 'buko_service.FirebaseService.instance')
+          p.write_text(s)
+          PY
+          git diff -- lib/main.dart
+          if ! git diff --quiet -- lib/main.dart; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add lib/main.dart
+            git commit -m "fix: resolve FirebaseService import and typed data"
+            git push
+          fi
 
       - name: Analyze
         run: flutter analyze --no-fatal-infos

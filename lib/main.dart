@@ -1,724 +1,89 @@
 import 'package:flutter/material.dart';
 
 const adminCode = 'BUKO-ADMIN-2026';
-const navy = Color(0xFF0B1B2A);
 const green = Color(0xFF22C55E);
 const yellow = Color(0xFFFFC107);
 const blue = Color(0xFF2563EB);
 
-class Car {
-  final String name;
-  final int year;
-  final String price;
-  final String city;
-  final String type;
-  final String seller;
+class User { final String name, phone, password, role; User(this.name,this.phone,this.password,this.role); }
+class Car { final String name, price, city, type, seller; final int year; const Car(this.name,this.year,this.price,this.city,this.type,{this.seller='BUKO'}); }
+class PendingAd { final Car car; PendingAd(this.car); }
+class PurchaseRequest { final User buyer; final Car car; PurchaseRequest(this.buyer,this.car); }
+enum BukoTheme { midnight, emerald, royal }
 
-  const Car(this.name, this.year, this.price, this.city, this.type, {this.seller = 'BUKO'});
+ThemeData bukoTheme(BukoTheme t) {
+  final seed = t==BukoTheme.royal ? blue : green;
+  return ThemeData(useMaterial3:true, brightness:Brightness.dark, colorScheme:ColorScheme.fromSeed(seedColor:seed,brightness:Brightness.dark), scaffoldBackgroundColor:const Color(0xFF07131E), cardColor:const Color(0xFF102434));
 }
-
-class User {
-  final String name;
-  final String email;
-  final String password;
-  final String role;
-
-  User(this.name, this.email, this.password, this.role);
-}
-
-class PendingAd {
-  final Car car;
-  PendingAd(this.car);
-}
-
-const seedCars = <Car>[
-  Car('مرسيدس C 180', 2020, '880,000 ج.م', 'القاهرة', 'سيدان'),
-  Car('كيا سبورتاج', 2019, '720,000 ج.م', 'الجيزة', 'دفع رباعي'),
-  Car('هيونداي النترا', 2021, '690,000 ج.م', 'الإسكندرية', 'سيدان'),
-  Car('تويوتا كورولا', 2020, '760,000 ج.م', 'القاهرة', 'سيدان'),
-  Car('BMW X3', 2021, '1,600,000 ج.م', 'الجيزة', 'دفع رباعي'),
+const carsSeed = <Car>[
+  Car('مرسيدس C 180',2020,'880,000 ج.م','الخرطوم','سيدان'),
+  Car('كيا سبورتاج',2019,'720,000 ج.م','أم درمان','دفع رباعي'),
+  Car('هيونداي النترا',2021,'690,000 ج.م','بحري','سيدان'),
+  Car('تويوتا كورولا',2020,'760,000 ج.م','الخرطوم','سيدان'),
+  Car('BMW X3',2021,'1,600,000 ج.م','بورتسودان','دفع رباعي'),
 ];
+void main()=>runApp(const BukoApp());
 
-void main() => runApp(const BukoApp());
-
-class BukoApp extends StatelessWidget {
-  const BukoApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'BUKO',
-      theme: ThemeData(
-        useMaterial3: true,
-        scaffoldBackgroundColor: navy,
-        colorScheme: ColorScheme.fromSeed(seedColor: green, brightness: Brightness.dark),
-      ),
-      home: const SplashPage(),
-    );
-  }
+class BukoApp extends StatefulWidget { const BukoApp({super.key}); @override State<BukoApp> createState()=>_BukoAppState(); }
+class _BukoAppState extends State<BukoApp>{
+  BukoTheme theme=BukoTheme.midnight;
+  @override Widget build(BuildContext c)=>MaterialApp(debugShowCheckedModeBanner:false,title:'BUKO',theme:bukoTheme(theme),home:AuthGate(onTheme:(t)=>setState(()=>theme=t)));
 }
 
-class SplashPage extends StatefulWidget {
-  const SplashPage({super.key});
-
-  @override
-  State<SplashPage> createState() => _SplashPageState();
+class AuthGate extends StatefulWidget {
+  final ValueChanged<BukoTheme> onTheme; const AuthGate({super.key,required this.onTheme});
+  @override State<AuthGate> createState()=>_AuthGateState();
+}
+class _AuthGateState extends State<AuthGate>{
+  final users=<User>[]; final cars=<Car>[...carsSeed]; final pending=<PendingAd>[]; final requests=<PurchaseRequest>[]; User? user; int tab=0; String q='';
+  void msg(String s)=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s),behavior:SnackBarBehavior.floating));
+  @override Widget build(BuildContext c){
+    if(user==null)return AuthScreen(users:users,onLogin:(u)=>setState(()=>user=u),onAdmin:_admin);
+    final pages=[home(),explore(),SellPage(isSeller:user!.role=='seller',onSubmit:(car){setState(()=>pending.add(PendingAd(car)));msg('تم إرسال الإعلان للمراجعة.');}),favorites(),account()];
+    return Directionality(textDirection:TextDirection.rtl,child:Scaffold(body:SafeArea(child:pages[tab]),bottomNavigationBar:NavigationBar(selectedIndex:tab,onDestinationSelected:(i)=>setState(()=>tab=i),destinations:const[
+      NavigationDestination(icon:Icon(Icons.home_outlined),label:'الرئيسية'),NavigationDestination(icon:Icon(Icons.search),label:'استكشاف'),NavigationDestination(icon:Icon(Icons.add_circle_outline),label:'بيع سيارتك'),NavigationDestination(icon:Icon(Icons.favorite_border),label:'المفضلة'),NavigationDestination(icon:Icon(Icons.person_outline),label:'حسابي')])));
+  }
+  Widget logo()=>Row(children:[Container(width:48,height:48,decoration:BoxDecoration(color:green,borderRadius:BorderRadius.circular(15)),child:const Center(child:Text('B',style:TextStyle(fontSize:30,fontWeight:FontWeight.w900)))),const SizedBox(width:10),const Text('BUKO',style:TextStyle(fontSize:30,fontWeight:FontWeight.w900,letterSpacing:3))]);
+  Widget searchBox()=>TextField(onChanged:(v)=>setState(()=>q=v),decoration:InputDecoration(filled:true,fillColor:Colors.white,prefixIcon:const Icon(Icons.search,color:Colors.black54),hintText:'ابحث عن سيارة أو موديل...',hintStyle:const TextStyle(color:Colors.black45),border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none)));
+  List<Car> get filtered=>cars.where((c)=>q.trim().isEmpty||'${c.name} ${c.city} ${c.type}'.toLowerCase().contains(q.trim().toLowerCase())).toList();
+  Widget home()=>ListView(padding:const EdgeInsets.all(16),children:[logo(),const SizedBox(height:18),Container(padding:const EdgeInsets.all(24),decoration:BoxDecoration(borderRadius:BorderRadius.circular(28),gradient:const LinearGradient(colors:[Color(0xFF123D38),Color(0xFF07131E)])),child:const Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('السوق الذكي للسيارات',style:TextStyle(color:green)),SizedBox(height:8),Text('سيارتك القادمة\nتبدأ من هنا',style:TextStyle(fontSize:31,fontWeight:FontWeight.w900)),Text('تصفح وقارن وتواصل بثقة.',style:TextStyle(color:Colors.white70))])),const SizedBox(height:14),searchBox(),section('سيارات مميزة'),SizedBox(height:220,child:ListView(scrollDirection:Axis.horizontal,children:filtered.take(4).map(featured).toList())),section('أحدث السيارات'),...filtered.take(5).map(card)]);
+  Widget section(String s)=>Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Text(s,style:const TextStyle(fontSize:21,fontWeight:FontWeight.w900)));
+  Widget featured(Car c)=>GestureDetector(onTap:()=>details(c),child:Container(width:205,margin:const EdgeInsets.only(left:10),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(20)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:Container(decoration:const BoxDecoration(color:Color(0xFFE8EEF2),borderRadius:BorderRadius.vertical(top:Radius.circular(20))),child:const Center(child:Icon(Icons.directions_car,size:82,color:Color(0xFF0B1B2A))))),Padding(padding:const EdgeInsets.all(11),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(c.name,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.bold)),Text('${c.year} • ${c.city}',style:const TextStyle(color:Colors.black54)),Text(c.price,style:const TextStyle(color:blue,fontWeight:FontWeight.w900))]))])));
+  Widget card(Car c)=>Card(color:Colors.white,child:ListTile(onTap:()=>details(c),leading:const CircleAvatar(backgroundColor:Color(0xFFE8F7ED),child:Icon(Icons.directions_car,color:green)),title:Text(c.name,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.bold)),subtitle:Text('${c.year} • ${c.city} • ${c.type}\n${c.price}',style:const TextStyle(color:Colors.black54)),trailing:const Icon(Icons.chevron_left,color:Colors.black54)));
+  Widget explore()=>ListView(padding:const EdgeInsets.all(16),children:[const Text('استكشاف السيارات',style:TextStyle(fontSize:28,fontWeight:FontWeight.w900)),const SizedBox(height:14),searchBox(),section('${filtered.length} سيارة متاحة'),...filtered.map(card)]);
+  Widget favorites()=>const Center(child:Text('المفضلة\nستظهر هنا السيارات التي تحفظها',textAlign:TextAlign.center,style:TextStyle(fontSize:19)));
+  Widget account()=>ListView(padding:const EdgeInsets.all(18),children:[const Text('حسابي',style:TextStyle(fontSize:28,fontWeight:FontWeight.w900)),Card(child:ListTile(leading:const CircleAvatar(child:Icon(Icons.person)),title:Text(user!.name),subtitle:Text('${user!.phone} • ${user!.role=='seller'?'بائع':'مشتري'}'))),ListTile(leading:const Icon(Icons.palette_outlined),title:const Text('الثيم والمظهر'),onTap:themes),ListTile(leading:const Icon(Icons.logout),title:const Text('تسجيل الخروج'),onTap:()=>setState(()=>user=null))]);
+  void details(Car car)=>Navigator.push(context,MaterialPageRoute(builder:(_)=>DetailsPage(car:car,onBuy:(){setState(()=>requests.add(PurchaseRequest(user!,car)));Navigator.pop(context);msg('تم إرسال طلب الشراء للإدارة.');})));
+  Future<void> themes()async{final t=await showDialog<BukoTheme>(context:context,builder:(_)=>SimpleDialog(title:const Text('ثيمات BUKO'),children:[SimpleDialogOption(onPressed:()=>Navigator.pop(context,BukoTheme.midnight),child:const Text('Midnight • داكن فاخر')),SimpleDialogOption(onPressed:()=>Navigator.pop(context,BukoTheme.emerald),child:const Text('Emerald • أخضر احترافي')),SimpleDialogOption(onPressed:()=>Navigator.pop(context,BukoTheme.royal),child:const Text('Royal • أزرق ملكي'))]));if(t!=null)widget.onTheme(t);}
+  Future<void> _admin()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>AdminPage(users:users,pending:pending,requests:requests,cars:cars,onApprove:(i)=>setState(()=>cars.insert(0,pending.removeAt(i).car)),onReject:(i)=>setState(()=>pending.removeAt(i)),onPost:(c)=>setState(()=>cars.insert(0,c)))));}
 }
 
-class _SplashPageState extends State<SplashPage> {
-  @override
-  void initState() {
-    super.initState();
-    Future.delayed(const Duration(milliseconds: 1800), () {
-      if (mounted) {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
-      }
-    });
+class AuthScreen extends StatefulWidget{
+  final List<User> users; final ValueChanged<User> onLogin; final VoidCallback onAdmin;
+  const AuthScreen({super.key,required this.users,required this.onLogin,required this.onAdmin});
+  @override State<AuthScreen> createState()=>_AuthScreenState();
+}
+class _AuthScreenState extends State<AuthScreen>{
+  bool login=true; final name=TextEditingController(),phone=TextEditingController(),password=TextEditingController(); String role='buyer',error='';
+  @override void dispose(){name.dispose();phone.dispose();password.dispose();super.dispose();}
+  String norm(String s){var p=s.trim().replaceAll(' ','');if(p.startsWith('249'))p='+$p';if(p.startsWith('00249'))p='+${p.substring(2)}';return p;}
+  bool valid(String p)=>RegExp(r'^\+249\d{9}$').hasMatch(p);
+  void submit(){
+    if(phone.text.trim()==adminCode){widget.onAdmin();return;} final p=norm(phone.text);
+    if(!valid(p)){setState(()=>error='التسجيل متاح لأرقام السودان +249 فقط');return;} if(password.text.length<6){setState(()=>error='كلمة المرور 6 أحرف على الأقل');return;}
+    if(login){final u=widget.users.where((x)=>x.phone==p&&x.password==password.text&&x.role==role).firstOrNull;if(u==null){setState(()=>error='رقم الهاتف أو كلمة المرور غير صحيحة');return;}widget.onLogin(u);}else{if(name.text.trim().isEmpty){setState(()=>error='اكتب الاسم');return;}if(widget.users.any((x)=>x.phone==p)){setState(()=>error='رقم الهاتف مسجل مسبقًا');return;}final u=User(name.text.trim(),p,password.text,role);widget.users.add(u);widget.onLogin(u);}
   }
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Colors.black,
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('BUKO', style: TextStyle(fontSize: 64, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 5)),
-            SizedBox(height: 10),
-            Text('حبابك عشرة', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: green)),
-            SizedBox(height: 24),
-            CircularProgressIndicator(color: green),
-          ],
-        ),
-      ),
-    );
-  }
+  @override Widget build(BuildContext c)=>Directionality(textDirection:TextDirection.rtl,child:Scaffold(body:Stack(children:[Positioned(top:-90,left:-70,child:orb(green)),Positioned(bottom:-120,right:-90,child:orb(blue)),SafeArea(child:Center(child:SingleChildScrollView(padding:const EdgeInsets.all(22),child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:460),child:Column(children:[Container(width:88,height:88,decoration:BoxDecoration(color:green,borderRadius:BorderRadius.circular(28),boxShadow:const[BoxShadow(blurRadius:30,color:Color(0x5522C55E))]),child:const Center(child:Text('B',style:TextStyle(fontSize:58,fontWeight:FontWeight.w900)))),const SizedBox(height:14),const Text('BUKO',style:TextStyle(fontSize:42,fontWeight:FontWeight.w900,letterSpacing:5)),const Text('حبابك عشرة',style:TextStyle(color:green,fontSize:18,fontWeight:FontWeight.bold)),const SizedBox(height:26),Card(color:const Color(0xDD102434),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28)),child:Padding(padding:const EdgeInsets.all(20),child:Column(children:[Row(children:[Expanded(child:tabBtn('تسجيل الدخول',login)),Expanded(child:tabBtn('إنشاء حساب',!login))]),const SizedBox(height:20),if(!login)TextField(controller:name,decoration:const InputDecoration(labelText:'الاسم الكامل',prefixIcon:Icon(Icons.person_outline))),if(!login)const SizedBox(height:12),TextField(controller:phone,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'رقم الهاتف السوداني',hintText:'+249XXXXXXXXX',prefixIcon:Icon(Icons.phone))),const SizedBox(height:12),TextField(controller:password,obscureText:true,decoration:const InputDecoration(labelText:'كلمة المرور',prefixIcon:Icon(Icons.lock_outline))),const SizedBox(height:8),Row(children:[Expanded(child:RadioListTile(value:'buyer',groupValue:role,onChanged:(v)=>setState(()=>role=v!),title:const Text('مشتري'),dense:true)),Expanded(child:RadioListTile(value:'seller',groupValue:role,onChanged:(v)=>setState(()=>role=v!),title:const Text('بائع'),dense:true))]),if(error.isNotEmpty)Text(error,style:const TextStyle(color:Colors.redAccent)),const SizedBox(height:8),SizedBox(width:double.infinity,child:FilledButton(onPressed:submit,child:Text(login?'دخول إلى BUKO':'إنشاء الحساب'))),if(login)TextButton(onPressed:()=>setState(()=>login=false),child:const Text('ليس لديك حساب؟ أنشئ حسابًا الآن'))]))),const SizedBox(height:14),const Text('الأرقام المقبولة: السودان فقط • +249',style:TextStyle(color:Colors.white54))]))))))]));
+  Widget tabBtn(String s,bool active)=>InkWell(onTap:()=>setState(()=>{login=s=='تسجيل الدخول';error='';}),child:Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:active?green:Colors.transparent,borderRadius:BorderRadius.circular(14)),child:Center(child:Text(s,style:const TextStyle(fontWeight:FontWeight.bold)))));
+  Widget orb(Color c)=>Container(width:230,height:230,decoration:BoxDecoration(shape:BoxShape.circle,color:c.withAlpha(20),boxShadow:[BoxShadow(color:c.withAlpha(30),blurRadius:100,spreadRadius:25)]));
 }
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class DetailsPage extends StatelessWidget{final Car car;final VoidCallback onBuy;const DetailsPage({super.key,required this.car,required this.onBuy});@override Widget build(BuildContext c)=>Directionality(textDirection:TextDirection.rtl,child:Scaffold(appBar:AppBar(title:const Text('تفاصيل السيارة')),body:ListView(padding:const EdgeInsets.all(18),children:[Container(height:220,decoration:BoxDecoration(borderRadius:BorderRadius.circular(24),gradient:const LinearGradient(colors:[Color(0xFF193D4F),Color(0xFF0B1B2A)])),child:const Icon(Icons.directions_car,size:120,color:green)),const SizedBox(height:18),Text(car.name,style:const TextStyle(fontSize:30,fontWeight:FontWeight.w900)),Text(car.price,style:const TextStyle(fontSize:25,color:green,fontWeight:FontWeight.w900)),Card(color:Colors.white,child:Padding(padding:const EdgeInsets.all(16),child:Column(children:[r('السنة','${car.year}'),r('المدينة',car.city),r('النوع',car.type),r('البائع',car.seller)]))),const SizedBox(height:16),SizedBox(width:double.infinity,child:FilledButton.icon(onPressed:onBuy,icon:const Icon(Icons.shopping_cart_checkout),label:const Text('طلب شراء السيارة'))])));Widget r(String a,String b)=>Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Row(children:[Expanded(child:Text(a,style:const TextStyle(color:Colors.black54))),Text(b,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.bold))]));}
 
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
+class SellPage extends StatefulWidget{final bool isSeller;final ValueChanged<Car> onSubmit;const SellPage({super.key,required this.isSeller,required this.onSubmit});@override State<SellPage> createState()=>_SellPageState();}
+class _SellPageState extends State<SellPage>{final n=TextEditingController(),y=TextEditingController(),p=TextEditingController();String type='سيدان',city='الخرطوم';@override void dispose(){n.dispose();y.dispose();p.dispose();super.dispose();}void submit(){final year=int.tryParse(y.text);if(n.text.trim().isEmpty||p.text.trim().isEmpty||year==null)return;widget.onSubmit(Car(n.text.trim(),year,p.text.trim(),city,type,seller:'بائع'));n.clear();y.clear();p.clear();}@override Widget build(BuildContext c)=>!widget.isSeller?const Center(child:Text('أنشئ حساب بائع لإضافة إعلان',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold))):ListView(padding:const EdgeInsets.all(18),children:[const Text('إضافة إعلان',style:TextStyle(fontSize:28,fontWeight:FontWeight.w900)),const Text('سيتم إرسال الإعلان للإدارة للمراجعة.',style:TextStyle(color:Colors.white70)),TextField(controller:n,decoration:const InputDecoration(labelText:'اسم السيارة')),TextField(controller:y,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'السنة')),TextField(controller:p,decoration:const InputDecoration(labelText:'السعر')),DropdownButtonFormField(initialValue:type,items:const['سيدان','دفع رباعي','بيك أب'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>type=v!)),DropdownButtonFormField(initialValue:city,items:const['الخرطوم','أم درمان','بحري','بورتسودان'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>city=v!)),const SizedBox(height:16),FilledButton.icon(onPressed:submit,icon:const Icon(Icons.send),label:const Text('إرسال للمراجعة'))];}
 
-class _HomePageState extends State<HomePage> {
-  int tab = 0;
-  String query = '';
-  String selectedType = 'الكل';
-  String selectedCity = 'الكل';
-  User? currentUser;
-  final cars = <Car>[...seedCars];
-  final favorites = <int>{};
-  final pending = <PendingAd>[];
-  final users = <User>[];
-
-  bool get isSeller => currentUser?.role == 'seller';
-
-  List<int> get filtered {
-    final q = query.trim().toLowerCase();
-    return List.generate(cars.length, (i) => i).where((i) {
-      final car = cars[i];
-      final text = '${car.name} ${car.city} ${car.type}'.toLowerCase();
-      return (q.isEmpty || text.contains(q)) &&
-          (selectedType == 'الكل' || car.type == selectedType) &&
-          (selectedCity == 'الكل' || car.city == selectedCity);
-    }).toList();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final pages = <Widget>[
-      _home(),
-      _explore(),
-      SellPage(isSeller: isSeller, onSubmit: _submitSellerAd),
-      _favorites(),
-      _account(),
-    ];
-
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        body: SafeArea(child: pages[tab]),
-        bottomNavigationBar: NavigationBar(
-          backgroundColor: Colors.white,
-          selectedIndex: tab,
-          onDestinationSelected: (value) => setState(() => tab = value),
-          destinations: const [
-            NavigationDestination(icon: Icon(Icons.home_outlined, color: Colors.black54), selectedIcon: Icon(Icons.home, color: green), label: 'الرئيسية'),
-            NavigationDestination(icon: Icon(Icons.search, color: Colors.black54), selectedIcon: Icon(Icons.search, color: green), label: 'استكشاف'),
-            NavigationDestination(icon: Icon(Icons.add_circle_outline, color: Colors.black54), selectedIcon: Icon(Icons.add_circle, color: green), label: 'بيع سيارتك'),
-            NavigationDestination(icon: Icon(Icons.favorite_border, color: Colors.black54), selectedIcon: Icon(Icons.favorite, color: Colors.red), label: 'المفضلة'),
-            NavigationDestination(icon: Icon(Icons.person_outline, color: Colors.black54), selectedIcon: Icon(Icons.person, color: green), label: 'حسابي'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _header() {
-    return Row(
-      children: [
-        const Text('BUKO', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 2)),
-        const Spacer(),
-        IconButton(onPressed: () => setState(() => tab = 4), icon: const Icon(Icons.menu)),
-      ],
-    );
-  }
-
-  Widget _home() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _header(),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(22),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            gradient: const LinearGradient(colors: [Color(0xFF18384D), Color(0xFF07131E)]),
-          ),
-          child: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('السوق الذكي للسيارات', style: TextStyle(color: Colors.white70)),
-              SizedBox(height: 8),
-              Text('اعثر على سيارتك', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
-              Text('المستعملة بثقة', style: TextStyle(fontSize: 23, color: yellow, fontWeight: FontWeight.w900)),
-              SizedBox(height: 8),
-              Text('آلاف السيارات بانتظارك', style: TextStyle(color: Colors.white70)),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        _searchField(),
-        const SizedBox(height: 14),
-        _advancedBox(),
-        _sectionTitle('السيارات المميزة'),
-        SizedBox(height: 205, child: ListView(scrollDirection: Axis.horizontal, children: filtered.take(4).map(_featuredCard).toList())),
-        _sectionTitle('أحدث السيارات'),
-        ...filtered.take(4).map(_carCard),
-      ],
-    );
-  }
-
-  Widget _searchField() {
-    return TextField(
-      onChanged: (value) => setState(() => query = value),
-      onSubmitted: (_) => setState(() => tab = 1),
-      style: const TextStyle(color: Colors.black87),
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: Colors.white,
-        prefixIcon: const Icon(Icons.search, color: Colors.black54),
-        suffixIcon: IconButton(onPressed: _showFilters, icon: const Icon(Icons.tune, color: navy)),
-        hintText: 'إبحث عن ماركة أو موديل أو كلمة مفتاحية...',
-        hintStyle: const TextStyle(color: Colors.black45),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
-      ),
-    );
-  }
-
-  Widget _advancedBox() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: const Color(0xFF14283A), borderRadius: BorderRadius.circular(20)),
-      child: Column(
-        children: [
-          Row(children: [const Text('بحث متقدم', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), const Spacer(), IconButton(onPressed: _showFilters, icon: const Icon(Icons.tune))]),
-          Row(children: [Expanded(child: _filterBox('النوع', selectedType)), const SizedBox(width: 8), Expanded(child: _filterBox('المحافظة', selectedCity))]),
-          const SizedBox(height: 10),
-          SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: _showFilters, icon: const Icon(Icons.search), label: const Text('بحث'), style: FilledButton.styleFrom(backgroundColor: yellow, foregroundColor: Colors.black))),
-        ],
-      ),
-    );
-  }
-
-  Widget _filterBox(String title, String value) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: const TextStyle(color: Colors.black54, fontSize: 11)),
-        Text(value, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
-      ]),
-    );
-  }
-
-  Widget _sectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 18, bottom: 9),
-      child: Row(children: [Text(title, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900)), const Spacer(), TextButton(onPressed: () => setState(() => tab = 1), child: const Text('عرض الكل'))]),
-    );
-  }
-
-  Widget _featuredCard(int index) {
-    final car = cars[index];
-    return GestureDetector(
-      onTap: () => _details(index),
-      child: Container(
-        width: 190,
-        margin: const EdgeInsets.only(left: 9),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(
-            height: 105,
-            decoration: const BoxDecoration(color: Color(0xFFE8EEF2), borderRadius: BorderRadius.vertical(top: Radius.circular(18))),
-            child: Stack(children: [
-              const Center(child: Icon(Icons.directions_car, size: 70, color: navy)),
-              Positioned(top: 7, right: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), color: yellow, child: const Text('مميز', style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold)))),
-              Positioned(left: 0, top: 0, child: IconButton(onPressed: () => _toggleFavorite(index), icon: Icon(favorites.contains(index) ? Icons.favorite : Icons.favorite_border, color: Colors.red))),
-            ]),
-          ),
-          Padding(padding: const EdgeInsets.all(10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(car.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
-            Text('${car.year} • ${car.city}', style: const TextStyle(color: Colors.black54, fontSize: 11)),
-            Text(car.price, style: const TextStyle(color: blue, fontWeight: FontWeight.w900)),
-          ])),
-        ]),
-      ),
-    );
-  }
-
-  Widget _carCard(int index) {
-    final car = cars[index];
-    return Card(
-      color: Colors.white,
-      margin: const EdgeInsets.only(bottom: 9),
-      child: ListTile(
-        onTap: () => _details(index),
-        leading: const CircleAvatar(backgroundColor: Color(0xFFE8F7ED), child: Icon(Icons.directions_car, color: green)),
-        title: Text(car.name, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
-        subtitle: Text('${car.year} • ${car.city} • ${car.type}\n${car.price}', style: const TextStyle(color: Colors.black54)),
-        trailing: IconButton(onPressed: () => _toggleFavorite(index), icon: Icon(favorites.contains(index) ? Icons.favorite : Icons.favorite_border, color: Colors.red)),
-      ),
-    );
-  }
-
-  Widget _explore() {
-    return ListView(padding: const EdgeInsets.all(16), children: [
-      const Text('استكشاف السيارات', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
-      const SizedBox(height: 12),
-      _searchField(),
-      const SizedBox(height: 10),
-      Row(children: [Chip(label: Text(selectedType)), const SizedBox(width: 8), Chip(label: Text(selectedCity)), const Spacer(), IconButton.filled(onPressed: _showFilters, icon: const Icon(Icons.filter_list))]),
-      Text('${filtered.length} سيارة متاحة', style: const TextStyle(color: Colors.white70)),
-      const SizedBox(height: 8),
-      ...filtered.map(_carCard),
-    ]);
-  }
-
-  Widget _favorites() {
-    final ids = favorites.where((i) => i >= 0 && i < cars.length).toList();
-    return ListView(padding: const EdgeInsets.all(16), children: [
-      const Text('المفضلة', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
-      const SizedBox(height: 8),
-      const Text('السيارات التي حفظتها', style: TextStyle(color: Colors.white70)),
-      const SizedBox(height: 14),
-      if (ids.isEmpty) const Padding(padding: EdgeInsets.all(30), child: Center(child: Text('لم تحفظ أي سيارة بعد'))),
-      ...ids.map(_carCard),
-    ]);
-  }
-
-  Widget _account() {
-    if (currentUser == null) {
-      return ListView(padding: const EdgeInsets.all(18), children: [
-        const Text('حسابي', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 6),
-        const Text('سجّل دخولك أو أنشئ حساباً جديداً', style: TextStyle(color: Colors.white70)),
-        const SizedBox(height: 22),
-        SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: _login, icon: const Icon(Icons.login), label: const Text('تسجيل الدخول'))),
-        OutlinedButton.icon(onPressed: _register, icon: const Icon(Icons.person_add), label: const Text('إنشاء حساب')),
-      ]);
-    }
-
-    return ListView(padding: const EdgeInsets.all(18), children: [
-      const Text('حسابي', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
-      Card(child: ListTile(leading: const CircleAvatar(child: Icon(Icons.person)), title: Text(currentUser!.name), subtitle: Text(currentUser!.email))),
-      Card(child: ListTile(leading: Icon(isSeller ? Icons.storefront : Icons.shopping_bag, color: green), title: Text(isSeller ? 'حساب بائع' : 'حساب مشتري'), subtitle: Text(isSeller ? 'إعلاناتك تحتاج موافقة الإدارة.' : 'استكشف السيارات واحفظ المفضلة.'))),
-      ListTile(leading: const Icon(Icons.logout), title: const Text('تسجيل الخروج'), onTap: () => setState(() => currentUser = null)),
-    ]);
-  }
-
-  void _toggleFavorite(int index) {
-    setState(() {
-      if (favorites.contains(index)) {
-        favorites.remove(index);
-      } else {
-        favorites.add(index);
-      }
-    });
-  }
-
-  void _details(int index) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => DetailsPage(car: cars[index], favorite: favorites.contains(index), onFavorite: () => _toggleFavorite(index))));
-  }
-
-  void _submitSellerAd(Car car) {
-    if (!isSeller) {
-      _message('أنشئ حساب بائع أولاً');
-      return;
-    }
-    setState(() => pending.add(PendingAd(car)));
-    _message('تم إرسال الإعلان للمراجعة.');
-  }
-
-  Future<void> _login() async {
-    final result = await showDialog<dynamic>(context: context, builder: (_) => LoginDialog(users: users));
-    if (!mounted || result == null) return;
-    if (result == adminCode) {
-      await Navigator.push(context, MaterialPageRoute(builder: (_) => AdminPage(pending: pending, users: users, cars: cars, onApprove: (i) => setState(() => cars.add(pending.removeAt(i).car)), onReject: (i) => setState(() => pending.removeAt(i)), onPost: (car) => setState(() => cars.insert(0, car)))));
-      return;
-    }
-    if (result is User) setState(() => currentUser = result);
-  }
-
-  Future<void> _register() async {
-    final result = await showDialog<User>(context: context, builder: (_) => const RegisterDialog());
-    if (!mounted || result == null) return;
-    if (users.any((u) => u.email.toLowerCase() == result.email.toLowerCase())) {
-      _message('البريد الإلكتروني مسجل مسبقاً');
-      return;
-    }
-    setState(() {
-      users.add(result);
-      currentUser = result;
-    });
-  }
-
-  Future<void> _showFilters() async {
-    var type = selectedType;
-    var city = selectedCity;
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('البحث المتقدم'),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          DropdownButtonFormField<String>(initialValue: type, items: const ['الكل', 'سيدان', 'دفع رباعي', 'بيك أب'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => type = v ?? type),
-          DropdownButtonFormField<String>(initialValue: city, items: const ['الكل', 'القاهرة', 'الجيزة', 'الإسكندرية'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => city = v ?? city),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
-          FilledButton(onPressed: () { setState(() { selectedType = type; selectedCity = city; }); Navigator.pop(dialogContext); }, child: const Text('تطبيق')),
-        ],
-      ),
-    );
-  }
-
-  void _message(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text), behavior: SnackBarBehavior.floating));
-  }
-}
-
-class LoginDialog extends StatefulWidget {
-  final List<User> users;
-  const LoginDialog({super.key, required this.users});
-
-  @override
-  State<LoginDialog> createState() => _LoginDialogState();
-}
-
-class _LoginDialogState extends State<LoginDialog> {
-  final id = TextEditingController();
-  final password = TextEditingController();
-  String role = 'buyer';
-  String error = '';
-
-  @override
-  void dispose() {
-    id.dispose();
-    password.dispose();
-    super.dispose();
-  }
-
-  void submit() {
-    final value = id.text.trim();
-    if (value == adminCode) {
-      Navigator.pop(context, adminCode);
-      return;
-    }
-    for (final user in widget.users) {
-      if (user.email.toLowerCase() == value.toLowerCase() && user.password == password.text && user.role == role) {
-        Navigator.pop(context, user);
-        return;
-      }
-    }
-    setState(() => error = 'بيانات الدخول غير صحيحة');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('تسجيل الدخول'),
-      content: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: id, decoration: const InputDecoration(labelText: 'البريد الإلكتروني أو رمز الإدارة')),
-        TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'كلمة المرور')),
-        DropdownButtonFormField<String>(initialValue: role, items: const [DropdownMenuItem(value: 'buyer', child: Text('مشتري')), DropdownMenuItem(value: 'seller', child: Text('بائع'))], onChanged: (v) => setState(() => role = v ?? role)),
-        if (error.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text(error, style: const TextStyle(color: Colors.red))),
-      ]),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')), FilledButton(onPressed: submit, child: const Text('دخول'))],
-    );
-  }
-}
-
-class RegisterDialog extends StatefulWidget {
-  const RegisterDialog({super.key});
-
-  @override
-  State<RegisterDialog> createState() => _RegisterDialogState();
-}
-
-class _RegisterDialogState extends State<RegisterDialog> {
-  final name = TextEditingController();
-  final email = TextEditingController();
-  final password = TextEditingController();
-  String role = 'buyer';
-
-  @override
-  void dispose() {
-    name.dispose();
-    email.dispose();
-    password.dispose();
-    super.dispose();
-  }
-
-  void submit() {
-    if (name.text.trim().isEmpty || email.text.trim().isEmpty || password.text.isEmpty) return;
-    Navigator.pop(context, User(name.text.trim(), email.text.trim(), password.text, role));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('إنشاء حساب'),
-      content: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: name, decoration: const InputDecoration(labelText: 'الاسم')),
-        TextField(controller: email, decoration: const InputDecoration(labelText: 'البريد الإلكتروني')),
-        TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'كلمة المرور')),
-        DropdownButtonFormField<String>(initialValue: role, items: const [DropdownMenuItem(value: 'buyer', child: Text('مشتري')), DropdownMenuItem(value: 'seller', child: Text('بائع'))], onChanged: (v) => setState(() => role = v ?? role)),
-      ]),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')), FilledButton(onPressed: submit, child: const Text('إنشاء'))],
-    );
-  }
-}
-
-class SellPage extends StatefulWidget {
-  final bool isSeller;
-  final ValueChanged<Car> onSubmit;
-  const SellPage({super.key, required this.isSeller, required this.onSubmit});
-
-  @override
-  State<SellPage> createState() => _SellPageState();
-}
-
-class _SellPageState extends State<SellPage> {
-  final name = TextEditingController();
-  final year = TextEditingController();
-  final price = TextEditingController();
-  String type = 'سيدان';
-  String city = 'القاهرة';
-
-  @override
-  void dispose() {
-    name.dispose();
-    year.dispose();
-    price.dispose();
-    super.dispose();
-  }
-
-  void submit() {
-    final y = int.tryParse(year.text.trim());
-    if (name.text.trim().isEmpty || price.text.trim().isEmpty || y == null) return;
-    widget.onSubmit(Car(name.text.trim(), y, price.text.trim(), city, type, seller: 'بائع'));
-    name.clear();
-    year.clear();
-    price.clear();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!widget.isSeller) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(25),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              Icon(Icons.lock_outline, size: 60, color: yellow),
-              SizedBox(height: 14),
-              Text('بيع سيارتك', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
-              SizedBox(height: 8),
-              Text('هذه الميزة متاحة لحسابات البائعين فقط.'),
-              SizedBox(height: 18),
-              Text('سجّل حساب بائع من صفحة حسابي.'),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return ListView(padding: const EdgeInsets.all(18), children: [
-      const Text('إضافة إعلان', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
-      const SizedBox(height: 6),
-      const Text('سيتم إرسال الإعلان للإدارة للمراجعة قبل النشر.', style: TextStyle(color: Colors.white70)),
-      const SizedBox(height: 18),
-      TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم السيارة', filled: true, fillColor: Colors.white)),
-      const SizedBox(height: 10),
-      TextField(controller: year, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'السنة', filled: true, fillColor: Colors.white)),
-      const SizedBox(height: 10),
-      TextField(controller: price, decoration: const InputDecoration(labelText: 'السعر', filled: true, fillColor: Colors.white)),
-      const SizedBox(height: 10),
-      DropdownButtonFormField<String>(initialValue: type, decoration: const InputDecoration(labelText: 'النوع'), items: const ['سيدان', 'دفع رباعي', 'بيك أب'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => type = v ?? type)),
-      const SizedBox(height: 10),
-      DropdownButtonFormField<String>(initialValue: city, decoration: const InputDecoration(labelText: 'المحافظة'), items: const ['القاهرة', 'الجيزة', 'الإسكندرية'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => city = v ?? city)),
-      const SizedBox(height: 18),
-      FilledButton.icon(onPressed: submit, icon: const Icon(Icons.send), label: const Text('إرسال للمراجعة')),
-    ]);
-  }
-}
-
-class DetailsPage extends StatefulWidget {
-  final Car car;
-  final bool favorite;
-  final VoidCallback onFavorite;
-  const DetailsPage({super.key, required this.car, required this.favorite, required this.onFavorite});
-
-  @override
-  State<DetailsPage> createState() => _DetailsPageState();
-}
-
-class _DetailsPageState extends State<DetailsPage> {
-  late bool favorite;
-
-  @override
-  void initState() {
-    super.initState();
-    favorite = widget.favorite;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('تفاصيل السيارة')),
-      body: ListView(padding: const EdgeInsets.all(18), children: [
-        Container(height: 190, decoration: BoxDecoration(color: const Color(0xFF14283A), borderRadius: BorderRadius.circular(22)), child: const Icon(Icons.directions_car, size: 100, color: green)),
-        const SizedBox(height: 18),
-        Text(widget.car.name, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
-        Text(widget.car.price, style: const TextStyle(fontSize: 23, color: green, fontWeight: FontWeight.bold)),
-        Card(color: Colors.white, child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
-          _row('السنة', '${widget.car.year}'),
-          _row('المدينة', widget.car.city),
-          _row('النوع', widget.car.type),
-          _row('البائع', widget.car.seller),
-        ]))),
-        const SizedBox(height: 12),
-        FilledButton.icon(onPressed: () { setState(() => favorite = !favorite); widget.onFavorite(); }, icon: Icon(favorite ? Icons.favorite : Icons.favorite_border), label: Text(favorite ? 'إزالة من المفضلة' : 'حفظ في المفضلة')),
-      ]),
-    );
-  }
-
-  Widget _row(String title, String value) {
-    return Padding(padding: const EdgeInsets.symmetric(vertical: 7), child: Row(children: [Expanded(child: Text(title, style: const TextStyle(color: Colors.black54))), Text(value, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold))]));
-  }
-}
-
-class AdminPage extends StatefulWidget {
-  final List<PendingAd> pending;
-  final List<User> users;
-  final List<Car> cars;
-  final ValueChanged<int> onApprove;
-  final ValueChanged<int> onReject;
-  final ValueChanged<Car> onPost;
-
-  const AdminPage({super.key, required this.pending, required this.users, required this.cars, required this.onApprove, required this.onReject, required this.onPost});
-
-  @override
-  State<AdminPage> createState() => _AdminPageState();
-}
-
-class _AdminPageState extends State<AdminPage> {
-  Future<void> _addPost() async {
-    final result = await showDialog<Car>(context: context, builder: (_) => const AdminPostDialog());
-    if (!mounted || result == null) return;
-    widget.onPost(result);
-    setState(() {});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('لوحة تحكم BUKO')),
-        body: ListView(padding: const EdgeInsets.all(16), children: [
-          Card(child: ListTile(leading: const Icon(Icons.dashboard, color: green), title: const Text('إدارة التطبيق'), subtitle: Text('${widget.cars.length} منشور • ${widget.users.length} مستخدم • ${widget.pending.length} بانتظار المراجعة'))),
-          const SizedBox(height: 12),
-          FilledButton.icon(onPressed: _addPost, icon: const Icon(Icons.add), label: const Text('إضافة منشور مباشر من الأدمن')),
-          const SizedBox(height: 20),
-          const Text('طلبات الإعلانات', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
-          if (widget.pending.isEmpty) const Padding(padding: EdgeInsets.all(20), child: Center(child: Text('لا توجد طلبات معلقة'))),
-          ...List.generate(widget.pending.length, (index) {
-            final car = widget.pending[index].car;
-            return Card(color: Colors.white, child: ListTile(
-              title: Text(car.name, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
-              subtitle: Text('${car.year} • ${car.city} • ${car.price}', style: const TextStyle(color: Colors.black54)),
-              trailing: Wrap(children: [
-                IconButton(onPressed: () { widget.onApprove(index); setState(() {}); }, icon: const Icon(Icons.check, color: green)),
-                IconButton(onPressed: () { widget.onReject(index); setState(() {}); }, icon: const Icon(Icons.close, color: Colors.red)),
-              ]),
-            ));
-          }),
-          const SizedBox(height: 20),
-          const Text('المستخدمون', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
-          ...widget.users.map((u) => Card(child: ListTile(leading: const Icon(Icons.person), title: Text(u.name), subtitle: Text('${u.email} • ${u.role}')))),
-        ]),
-      ),
-    );
-  }
-}
-
-class AdminPostDialog extends StatefulWidget {
-  const AdminPostDialog({super.key});
-
-  @override
-  State<AdminPostDialog> createState() => _AdminPostDialogState();
-}
-
-class _AdminPostDialogState extends State<AdminPostDialog> {
-  final name = TextEditingController();
-  final year = TextEditingController(text: '2024');
-  final price = TextEditingController();
-  String city = 'القاهرة';
-  String type = 'سيدان';
-
-  @override
-  void dispose() {
-    name.dispose();
-    year.dispose();
-    price.dispose();
-    super.dispose();
-  }
-
-  void submit() {
-    final y = int.tryParse(year.text.trim());
-    if (name.text.trim().isEmpty || price.text.trim().isEmpty || y == null) return;
-    Navigator.pop(context, Car(name.text.trim(), y, price.text.trim(), city, type, seller: 'الإدارة'));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('إضافة منشور أدمن'),
-      content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم السيارة')),
-        TextField(controller: year, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'السنة')),
-        TextField(controller: price, decoration: const InputDecoration(labelText: 'السعر')),
-        DropdownButtonFormField<String>(initialValue: type, items: const ['سيدان', 'دفع رباعي', 'بيك أب'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => type = v ?? type)),
-        DropdownButtonFormField<String>(initialValue: city, items: const ['القاهرة', 'الجيزة', 'الإسكندرية'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => city = v ?? city)),
-      ])),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')), FilledButton(onPressed: submit, child: const Text('نشر الآن'))],
-    );
-  }
-}
+class AdminPage extends StatefulWidget{final List<User> users;final List<PendingAd> pending;final List<PurchaseRequest> requests;final List<Car> cars;final ValueChanged<int> onApprove,onReject;final ValueChanged<Car> onPost;const AdminPage({super.key,required this.users,required this.pending,required this.requests,required this.cars,required this.onApprove,required this.onReject,required this.onPost});@override State<AdminPage> createState()=>_AdminPageState();}
+class _AdminPageState extends State<AdminPage>{Future<void>post()async{final c=await showDialog<Car>(context:context,builder:(_)=>const AdminPostDialog());if(c!=null){widget.onPost(c);setState((){});}}@override Widget build(BuildContext c)=>Directionality(textDirection:TextDirection.rtl,child:Scaffold(appBar:AppBar(title:const Text('لوحة تحكم BUKO')),body:ListView(padding:const EdgeInsets.all(16),children:[Card(child:ListTile(leading:const Icon(Icons.dashboard,color:green),title:const Text('الإحصائيات'),subtitle:Text('${widget.users.length} مستخدم • ${widget.cars.length} سيارة • ${widget.pending.length} إعلان معلق • ${widget.requests.length} طلب شراء'))),FilledButton.icon(onPressed:post,icon:const Icon(Icons.add),label:const Text('إضافة منشور مباشر')),const SizedBox(height:20),const Text('المستخدمون',style:TextStyle(fontSize:21,fontWeight:FontWeight.w900)),...widget.users.map((u)=>Card(color:Colors.white,child:ListTile(title:Text(u.name,style:const TextStyle(color:Colors.black87,fontWeight:FontWeight.bold)),subtitle:Text('${u.phone} • ${u.role=='seller'?'بائع':'مشتري'}',style:const TextStyle(color:Colors.black54)),leading:const Icon(Icons.person,color:green)))),const SizedBox(height:20),const Text('إعلانات تنتظر الموافقة',style:TextStyle(fontSize:21,fontWeight:FontWeight.w900)),if(widget.pending.isEmpty)const Text('لا توجد إعلانات معلقة'),...List.generate(widget.pending.length,(i){final x=widget.pending[i].car;return Card(color:Colors.white,child:ListTile(title:Text(x.name,style:const TextStyle(color:Colors.black87)),subtitle:Text('${x.year} • ${x.city} • ${x.price}',style:const TextStyle(color:Colors.black54)),trailing:Wrap(children:[IconButton(onPressed:(){widget.onApprove(i);setState((){});},icon:const Icon(Icons.check,color:green)),IconButton(onPressed:(){widget.onReject(i);setState((){});},icon:const Icon(Icons.close,color:Colors.red))]));}),const SizedBox(height:20),const Text('طلبات الشراء',style:TextStyle(fontSize:21,fontWeight:FontWeight.w900)),if(widget.requests.isEmpty)const Text('لا توجد طلبات شراء بعد'),...widget.requests.map((r)=>Card(child:ListTile(leading:const Icon(Icons.shopping_cart,color:yellow),title:Text(r.car.name),subtitle:Text('${r.buyer.name} • ${r.buyer.phone}'))))]));}
+class AdminPostDialog extends StatefulWidget{const AdminPostDialog({super.key});@override State<AdminPostDialog> createState()=>_AdminPostDialogState();}
+class _AdminPostDialogState extends State<AdminPostDialog>{final n=TextEditingController(),y=TextEditingController(text:'2024'),p=TextEditingController();String t='سيدان',c='الخرطوم';@override void dispose(){n.dispose();y.dispose();p.dispose();super.dispose();}void go(){final year=int.tryParse(y.text);if(n.text.isEmpty||p.text.isEmpty||year==null)return;Navigator.pop(context,Car(n.text.trim(),year,p.text.trim(),c,t,seller:'الإدارة'));}@override Widget build(BuildContext c)=>AlertDialog(title:const Text('منشور مباشر من الأدمن'),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[TextField(controller:n,decoration:const InputDecoration(labelText:'اسم السيارة')),TextField(controller:y,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'السنة')),TextField(controller:p,decoration:const InputDecoration(labelText:'السعر')),DropdownButtonFormField(initialValue:t,items:const['سيدان','دفع رباعي','بيك أب'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>t=v!)),DropdownButtonFormField(initialValue:c,items:const['الخرطوم','أم درمان','بحري','بورتسودان'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>c=v!))])),actions:[TextButton(onPressed:()=>Navigator.pop(context),child:const Text('إلغاء')),FilledButton(onPressed:go,child:const Text('نشر الآن'))]);}

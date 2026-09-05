@@ -50,7 +50,7 @@ class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
   @override
   Widget build(BuildContext context) => StreamBuilder<auth.User?>(
-        stream: buko_service.FirebaseService.instance.authState,
+        stream: buko_service.buko_service.FirebaseService.instance.authState,
         builder: (_, snap) => snap.data == null ? const PhoneAuthPage() : const HomeShell(),
       );
 }
@@ -107,7 +107,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
     try {
       final credential = auth.PhoneAuthProvider.credential(verificationId: verificationId!, smsCode: code.text.trim());
       await auth.FirebaseAuth.instance.signInWithCredential(credential);
-      await buko_service.FirebaseService.instance.saveUserProfile(
+      await buko_service.buko_service.FirebaseService.instance.saveUserProfile(
         uid: auth.FirebaseAuth.instance.currentUser!.uid,
         name: 'مستخدم BUKO',
         phone: normalize(phone.text),
@@ -191,7 +191,7 @@ class HomePage extends StatelessWidget {
   const HomePage({super.key});
   @override
   Widget build(BuildContext context) => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: buko_service.FirebaseService.instance.watchCars(),
+        stream: buko_service.buko_service.FirebaseService.instance.watchCars(),
         builder: (_, snap) {
           final docs = snap.data?.docs ?? [];
           return ListView(padding: const EdgeInsets.all(16), children: [
@@ -213,7 +213,7 @@ class _ExplorePageState extends State<ExplorePage> {
   String query = '';
   @override
   Widget build(BuildContext context) => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-    stream: buko_service.FirebaseService.instance.watchCars(),
+    stream: buko_service.buko_service.FirebaseService.instance.watchCars(),
     builder: (_, snap) {
       final docs = (snap.data?.docs ?? []).where((d) {
         final q = query.toLowerCase(); final x = d.data();
@@ -240,7 +240,7 @@ class CarCard extends StatelessWidget {
       trailing: IconButton(icon: const Icon(Icons.shopping_bag_outlined), onPressed: () async {
         final seller = data['sellerId']; if (seller == null) return;
         try {
-          await buko_service.FirebaseService.instance.createPurchaseRequest(carId: id, sellerId: seller);
+          await buko_service.buko_service.FirebaseService.instance.createPurchaseRequest(carId: id, sellerId: seller);
           if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب الشراء ✓')));
         } catch (e) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال الطلب: $e'))); }
       }),
@@ -267,7 +267,7 @@ class _SellPageState extends State<SellPage> {
     final urls = <String>[];
     for (var i = 0; i < selectedImages.length; i++) {
       final bytes = await selectedImages[i].readAsBytes();
-      urls.add(await buko_service.FirebaseService.instance.uploadCarImage(bytes, '${DateTime.now().millisecondsSinceEpoch}_$i.jpg'));
+      urls.add(await buko_service.buko_service.FirebaseService.instance.uploadCarImage(bytes, '${DateTime.now().millisecondsSinceEpoch}_$i.jpg'));
     }
     return urls;
   }
@@ -277,7 +277,7 @@ class _SellPageState extends State<SellPage> {
     setState(() => loading = true);
     try {
       final urls = await uploadImages();
-      await buko_service.FirebaseService.instance.submitCar(name: name.text, year: int.parse(year.text), price: price.text, city: city.text, type: type, imageUrls: urls);
+      await buko_service.buko_service.FirebaseService.instance.submitCar(name: name.text, year: int.parse(year.text), price: price.text, city: city.text, type: type, imageUrls: urls);
       if (mounted) { name.clear(); year.clear(); price.clear(); city.clear(); setState(() => selectedImages.clear()); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ الإعلان للمراجعة ✓'))); }
     } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر نشر الإعلان: $e'))); }
     finally { if (mounted) setState(() => loading = false); }
@@ -297,4 +297,4 @@ class _SellPageState extends State<SellPage> {
 }
 
 class FavoritesPage extends StatelessWidget { const FavoritesPage({super.key}); @override Widget build(BuildContext context) => const Center(child: Text('المفضلة — ستتم مزامنتها مع Firebase في الخطوة التالية')); }
-class AccountPage extends StatelessWidget { const AccountPage({super.key}); @override Widget build(BuildContext context) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.person, size: 64), const SizedBox(height: 12), const Text('حساب BUKO', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), const SizedBox(height: 16), FilledButton.tonalIcon(onPressed: () => buko_service.FirebaseService.instance.signOut(), icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج'))])); }
+class AccountPage extends StatelessWidget { const AccountPage({super.key}); @override Widget build(BuildContext context) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.person, size: 64), const SizedBox(height: 12), const Text('حساب BUKO', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), const SizedBox(height: 16), FilledButton.tonalIcon(onPressed: () => buko_service.buko_service.FirebaseService.instance.signOut(), icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج'))])); }

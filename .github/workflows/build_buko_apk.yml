@@ -9,6 +9,12 @@ on:
 permissions:
   contents: write
 
+env:
+  FIREBASE_PROJECT_NUMBER: "113136352409"
+  FIREBASE_PROJECT_ID: "buko-6f769"
+  FIREBASE_APP_ID: "1:113136352409:android:c568ce9556ae2af5dc0c08"
+  FIREBASE_STORAGE_BUCKET: "buko-6f769.firebasestorage.app"
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -42,6 +48,48 @@ jobs:
           android.enableJetifier=true
           EOF
 
+      - name: Configure Firebase Android services
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$FIREBASE_API_KEY"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          data = {
+            "project_info": {
+              "project_number": os.environ["FIREBASE_PROJECT_NUMBER"],
+              "project_id": os.environ["FIREBASE_PROJECT_ID"],
+              "storage_bucket": os.environ["FIREBASE_STORAGE_BUCKET"]
+            },
+            "client": [{
+              "client_info": {
+                "mobilesdk_app_id": os.environ["FIREBASE_APP_ID"],
+                "android_client_info": {"package_name": "com.buko.app"}
+              },
+              "api_key": [{"current_key": os.environ["FIREBASE_API_KEY"]}]
+            }],
+            "configuration_version": "1"
+          }
+          Path("android/app/google-services.json").write_text(json.dumps(data, indent=2) + "\n")
+          PY
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('android/settings.gradle.kts')
+          s = p.read_text()
+          marker = 'plugins {'
+          if 'com.google.gms.google-services' not in s:
+              s = s.replace(marker, marker + '\n    id("com.google.gms.google-services") version "4.4.2" apply false', 1)
+          p.write_text(s)
+          p = Path('android/app/build.gradle.kts')
+          s = p.read_text()
+          if 'id("com.google.gms.google-services")' not in s:
+              s = s.replace('plugins {', 'plugins {\n    id("com.google.gms.google-services")', 1)
+          p.write_text(s)
+          PY
+
       - name: Get dependencies
         run: flutter pub get
 
@@ -61,7 +109,32 @@ jobs:
               s = s.replace("import 'firebase_options.dart';\n", "import 'firebase_options.dart';\nimport 'admin_page.dart';\n", 1)
 
           old = "class AccountPage extends StatelessWidget { const AccountPage({super.key}); @override Widget build(BuildContext context) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.person, size: 64), const SizedBox(height: 12), const Text('حساب BUKO', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), const SizedBox(height: 16), FilledButton.tonalIcon(onPressed: () => buko_service.FirebaseService.instance.signOut(), icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج'))])); }"
-          new = """class AccountPage extends StatelessWidget {\n  const AccountPage({super.key});\n\n  Future<bool> _isAdmin() async {\n    final user = auth.FirebaseAuth.instance.currentUser;\n    if (user == null) return false;\n    final result = await user.getIdTokenResult();\n    return result.claims?['admin'] == true;\n  }\n\n  @override\n  Widget build(BuildContext context) => FutureBuilder<bool>(\n    future: _isAdmin(),\n    builder: (_, snap) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [\n      const Icon(Icons.person, size: 64),\n      const SizedBox(height: 12),\n      const Text('حساب BUKO', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),\n      const SizedBox(height: 16),\n      if (snap.data == true) ...[\n        FilledButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminPage())), icon: const Icon(Icons.admin_panel_settings), label: const Text('لوحة تحكم الإدارة')),\n        const SizedBox(height: 10),\n      ],\n      FilledButton.tonalIcon(onPressed: () => buko_service.FirebaseService.instance.signOut(), icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج')),\n    ])),\n  );\n}"""
+          new = """class AccountPage extends StatelessWidget {
+  const AccountPage({super.key});
+
+  Future<bool> _isAdmin() async {
+    final user = auth.FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+    final result = await user.getIdTokenResult();
+    return result.claims?['admin'] == true;
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<bool>(
+    future: _isAdmin(),
+    builder: (_, snap) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+      const Icon(Icons.person, size: 64),
+      const SizedBox(height: 12),
+      const Text('حساب BUKO', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 16),
+      if (snap.data == true) ...[
+        FilledButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminPage())), icon: const Icon(Icons.admin_panel_settings), label: const Text('لوحة تحكم الإدارة')),
+        const SizedBox(height: 10),
+      ],
+      FilledButton.tonalIcon(onPressed: () => buko_service.FirebaseService.instance.signOut(), icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج')),
+    ])),
+  );
+}"""
           if old in s:
               s = s.replace(old, new, 1)
           else:

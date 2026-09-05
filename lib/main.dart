@@ -50,7 +50,7 @@ class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
   @override
   Widget build(BuildContext context) => StreamBuilder<auth.User?>(
-        stream: buko_service.FirebaseService.instance.authState,
+        stream: buko_service.buko_service.FirebaseService.instance.authState,
         builder: (_, snap) => snap.data == null ? const PhoneAuthPage() : const HomeShell(),
       );
 }
@@ -124,7 +124,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
         smsCode: code.text.trim(),
       );
       await auth.FirebaseAuth.instance.signInWithCredential(credential);
-      await buko_service.FirebaseService.instance.saveUserProfile(
+      await buko_service.buko_service.FirebaseService.instance.saveUserProfile(
         uid: auth.FirebaseAuth.instance.currentUser!.uid,
         name: 'مستخدم BUKO',
         phone: normalize(phone.text),
@@ -243,7 +243,7 @@ class HomePage extends StatelessWidget {
   const HomePage({super.key});
   @override
   Widget build(BuildContext context) => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: buko_service.FirebaseService.instance.watchCars(),
+        stream: buko_service.buko_service.FirebaseService.instance.watchCars(),
         builder: (_, snap) {
           final docs = snap.data?.docs ?? [];
           return ListView(
@@ -274,7 +274,7 @@ class _ExplorePageState extends State<ExplorePage> {
   String query = '';
   @override
   Widget build(BuildContext context) => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: buko_service.FirebaseService.instance.watchCars(),
+        stream: buko_service.buko_service.FirebaseService.instance.watchCars(),
         builder: (_, snap) {
           final docs = (snap.data?.docs ?? []).where((d) {
             final q = query.toLowerCase();
@@ -323,7 +323,7 @@ class CarCard extends StatelessWidget {
             final seller = data['sellerId'];
             if (seller == null) return;
             try {
-              await buko_service.FirebaseService.instance.createPurchaseRequest(carId: id, sellerId: seller);
+              await buko_service.buko_service.FirebaseService.instance.createPurchaseRequest(carId: id, sellerId: seller);
               if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب الشراء ✓')));
             } catch (e) {
               if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال الطلب: $e')));
@@ -390,7 +390,7 @@ class _SellPageState extends State<SellPage> {
     for (var i = 0; i < selectedImages.length; i++) {
       final image = selectedImages[i];
       final Uint8List bytes = await image.readAsBytes();
-      final url = await buko_service.FirebaseService.instance.uploadCarImage(bytes, '${DateTime.now().millisecondsSinceEpoch}_$i.jpg');
+      final url = await buko_service.buko_service.FirebaseService.instance.uploadCarImage(bytes, '${DateTime.now().millisecondsSinceEpoch}_$i.jpg');
       urls.add(url);
     }
     return urls;
@@ -408,7 +408,7 @@ class _SellPageState extends State<SellPage> {
     setState(() => loading = true);
     try {
       final urls = await uploadImages();
-      await buko_service.FirebaseService.instance.submitCar(
+      await buko_service.buko_service.FirebaseService.instance.submitCar(
         name: name.text,
         year: int.parse(year.text),
         price: price.text,
@@ -547,7 +547,7 @@ class AccountPage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               FilledButton.tonalIcon(
-                onPressed: () => buko_service.FirebaseService.instance.signOut(),
+                onPressed: () => buko_service.buko_service.FirebaseService.instance.signOut(),
                 icon: const Icon(Icons.logout),
                 label: const Text('تسجيل الخروج'),
               ),

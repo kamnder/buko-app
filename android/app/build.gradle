@@ -8,6 +8,15 @@ android {
     namespace 'com.buko.app'
     compileSdk flutter.compileSdkVersion
 
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
     defaultConfig {
         applicationId 'com.buko.app'
         minSdk flutter.minSdkVersion

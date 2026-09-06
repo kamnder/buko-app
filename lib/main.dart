@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
@@ -150,10 +149,7 @@ class _TopBarState extends State<_TopBar> {
   }
   @override
   Widget build(BuildContext context) => Row(children: [
-        GestureDetector(
-          onTap: hiddenAdminEntry,
-          child: Container(width: 50, height: 50, decoration: BoxDecoration(color: gold, borderRadius: BorderRadius.circular(16)), child: const Icon(Icons.key, color: Colors.black, size: 28)),
-        ),
+        GestureDetector(onTap: hiddenAdminEntry, child: Container(width: 50, height: 50, decoration: BoxDecoration(color: gold, borderRadius: BorderRadius.circular(16)), child: const Icon(Icons.key, color: Colors.black, size: 28))),
         const SizedBox(width: 12),
         const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('BUKO', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1.3)),
@@ -373,10 +369,6 @@ class _SellPageState extends State<SellPage> {
         DropdownButtonFormField<String>(value: type, decoration: const InputDecoration(labelText: 'نوع السيارة'), items: const ['سيدان', 'دفع رباعي', 'هاتشباك', 'بيك أب', 'باص'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => type = value ?? type)),
         const SizedBox(height: 14),
         OutlinedButton.icon(onPressed: loading ? null : pickImages, icon: const Icon(Icons.photo_library_outlined), label: Text(images.isEmpty ? 'أضف صور السيارة' : 'الصور: ${images.length}/8')),
-        if (images.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          SizedBox(height: 90, child: ListView.separated(scrollDirection: Axis.horizontal, itemCount: images.length, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (_, index) => FutureBuilder<Uint8List>(future: images[index].readAsBytes(), builder: (_, snapshot) => ClipRRect(borderRadius: BorderRadius.circular(12), child: snapshot.hasData ? Image.memory(snapshot.data!, width: 90, height: 90, fit: BoxFit.cover) : Container(width: 90, height: 90, color: const Color(0xFF1B222C), child: const Icon(Icons.image, color: gold))))))),
-        ],
         const SizedBox(height: 18),
         SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: loading ? null : submit, icon: const Icon(Icons.publish), label: Text(loading ? 'جارٍ النشر...' : 'إرسال للمراجعة'))),
       ]);

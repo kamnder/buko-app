@@ -6,7 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import 'admin_page.dart';
+import 'admin_login_page.dart';
 import 'firebase_options.dart';
 import 'phone_password_auth_page.dart';
 import 'services/firebase_service.dart' as buko_service;
@@ -24,73 +24,54 @@ Future<void> main() async {
 
 class BukoApp extends StatelessWidget {
   const BukoApp({super.key});
-
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'BUKO',
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: ink,
-        colorScheme: ColorScheme.fromSeed(seedColor: gold, brightness: Brightness.dark),
-        cardTheme: const CardThemeData(color: panel, elevation: 0),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: panel,
-          prefixIconColor: gold,
-          hintStyle: const TextStyle(color: muted),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: Colors.white10)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: gold)),
+  Widget build(BuildContext context) => MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'BUKO',
+        theme: ThemeData(
+          useMaterial3: true,
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: ink,
+          colorScheme: ColorScheme.fromSeed(seedColor: gold, brightness: Brightness.dark),
+          cardTheme: const CardThemeData(color: panel, elevation: 0),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: panel,
+            prefixIconColor: gold,
+            hintStyle: const TextStyle(color: muted),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: Colors.white10)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: gold)),
+          ),
         ),
-      ),
-      home: const AuthGate(),
-    );
-  }
+        home: const AuthGate(),
+      );
 }
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
-
   @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<auth.User?>(
-      stream: buko_service.FirebaseService.instance.authState,
-      builder: (context, snapshot) => snapshot.data == null ? const PhonePasswordAuthPage() : const HomeShell(),
-    );
-  }
+  Widget build(BuildContext context) => StreamBuilder<auth.User?>(
+        stream: buko_service.FirebaseService.instance.authState,
+        builder: (context, snapshot) => snapshot.data == null ? const PhonePasswordAuthPage() : const HomeShell(),
+      );
 }
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
-
   @override
   State<HomeShell> createState() => _HomeShellState();
 }
 
 class _HomeShellState extends State<HomeShell> {
   int tab = 0;
-
   @override
   Widget build(BuildContext context) {
-    const pages = <Widget>[
-      HomePage(),
-      ExplorePage(),
-      SellPage(),
-      FavoritesPage(),
-      AccountPage(),
-    ];
+    const pages = <Widget>[HomePage(), ExplorePage(), SellPage(), FavoritesPage(), AccountPage()];
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        body: SafeArea(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 280),
-            child: KeyedSubtree(key: ValueKey(tab), child: pages[tab]),
-          ),
-        ),
+        body: SafeArea(child: AnimatedSwitcher(duration: const Duration(milliseconds: 280), child: KeyedSubtree(key: ValueKey(tab), child: pages[tab]))),
         bottomNavigationBar: NavigationBar(
           backgroundColor: const Color(0xFF0C1016),
           indicatorColor: gold.withOpacity(.16),
@@ -111,266 +92,189 @@ class _HomeShellState extends State<HomeShell> {
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
-
   @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: buko_service.FirebaseService.instance.watchCars(),
-      builder: (context, snapshot) {
-        final docs = snapshot.data?.docs ?? const [];
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-          children: [
-            const _TopBar(),
-            const SizedBox(height: 14),
-            const AnimatedMarketHero(),
-            const SizedBox(height: 20),
-            const Text('ماذا تبحث اليوم؟', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 10),
-            const _SearchBox(),
-            const SizedBox(height: 20),
-            const _SectionTitle('تصفح حسب النوع'),
-            const SizedBox(height: 10),
-            const SizedBox(
-              height: 94,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(children: [
-                  _Cat(Icons.directions_car_filled, 'سيدان'),
-                  _Cat(Icons.directions_car, 'دفع رباعي'),
-                  _Cat(Icons.local_shipping, 'بيك أب'),
-                  _Cat(Icons.directions_bus, 'باص'),
-                ]),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const _SectionTitle('أحدث السيارات'),
-            const SizedBox(height: 10),
-            if (snapshot.hasError) const _Info('تعذر تحميل السيارات حالياً.'),
-            if (docs.isEmpty && !snapshot.hasError) const _Info('لا توجد إعلانات منشورة بعد. كن أول من يضيف سيارة!'),
-            ...docs.map((doc) => CarCard(data: doc.data(), id: doc.id)),
-          ],
-        );
-      },
-    );
-  }
+  Widget build(BuildContext context) => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: buko_service.FirebaseService.instance.watchCars(),
+        builder: (context, snapshot) {
+          final docs = snapshot.data?.docs ?? const [];
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+            children: [
+              const _TopBar(),
+              const SizedBox(height: 14),
+              const AnimatedMarketHero(),
+              const SizedBox(height: 20),
+              const Text('ماذا تبحث اليوم؟', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 10),
+              const _SearchBox(),
+              const SizedBox(height: 20),
+              const _SectionTitle('تصفح حسب النوع'),
+              const SizedBox(height: 10),
+              const SizedBox(height: 94, child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+                _Cat(Icons.directions_car_filled, 'سيدان'),
+                _Cat(Icons.directions_car, 'دفع رباعي'),
+                _Cat(Icons.local_shipping, 'بيك أب'),
+                _Cat(Icons.directions_bus, 'باص'),
+              ]))),
+              const SizedBox(height: 20),
+              const _SectionTitle('أحدث السيارات'),
+              const SizedBox(height: 10),
+              if (snapshot.hasError) const _Info('تعذر تحميل السيارات حالياً.'),
+              if (docs.isEmpty && !snapshot.hasError) const _Info('لا توجد إعلانات منشورة بعد. كن أول من يضيف سيارة!'),
+              ...docs.map((doc) => CarCard(data: doc.data(), id: doc.id)),
+            ],
+          );
+        },
+      );
 }
 
-class _TopBar extends StatelessWidget {
+class _TopBar extends StatefulWidget {
   const _TopBar();
+  @override
+  State<_TopBar> createState() => _TopBarState();
+}
+
+class _TopBarState extends State<_TopBar> {
+  int taps = 0;
+  DateTime? lastTap;
+
+  void hiddenAdminEntry() {
+    final now = DateTime.now();
+    if (lastTap == null || now.difference(lastTap!) > const Duration(seconds: 3)) taps = 0;
+    lastTap = now;
+    taps++;
+    if (taps >= 7) {
+      taps = 0;
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminLoginPage()));
+    }
+  }
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(color: gold, borderRadius: BorderRadius.circular(16)),
-          child: const Icon(Icons.key, color: Colors.black, size: 28),
-        ),
-        const SizedBox(width: 12),
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('BUKO', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1.3)),
-              Text('سيارات مستعملة بثقة وسهولة', style: TextStyle(fontSize: 12, color: muted)),
-            ],
+  Widget build(BuildContext context) => Row(
+        children: [
+          GestureDetector(
+            onTap: hiddenAdminEntry,
+            child: Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(color: gold, borderRadius: BorderRadius.circular(16)),
+              child: const Icon(Icons.key, color: Colors.black, size: 28),
+            ),
           ),
-        ),
-        IconButton(onPressed: null, icon: Icon(Icons.notifications_none_rounded)),
-      ],
-    );
-  }
+          const SizedBox(width: 12),
+          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('BUKO', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1.3)),
+            Text('سيارات مستعملة بثقة وسهولة', style: TextStyle(fontSize: 12, color: muted)),
+          ])),
+          const Icon(Icons.notifications_none_rounded),
+        ],
+      );
 }
 
 class _SearchBox extends StatelessWidget {
   const _SearchBox();
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 58,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)),
-      child: const Row(
-        children: [
-          Icon(Icons.search, color: gold),
-          SizedBox(width: 12),
-          Expanded(child: Text('ابحث عن ماركة، موديل أو مدينة', style: TextStyle(color: muted))),
-          Icon(Icons.tune_rounded, color: Colors.white70),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+        height: 58,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)),
+        child: const Row(children: [Icon(Icons.search, color: gold), SizedBox(width: 12), Expanded(child: Text('ابحث عن ماركة، موديل أو مدينة', style: TextStyle(color: muted))), Icon(Icons.tune_rounded, color: Colors.white70)]),
+      );
 }
 
 class _SectionTitle extends StatelessWidget {
   final String title;
   const _SectionTitle(this.title);
-
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
-        const Text('عرض الكل', style: TextStyle(color: gold, fontSize: 12, fontWeight: FontWeight.w700)),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => Row(children: [Expanded(child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800))), const Text('عرض الكل', style: TextStyle(color: gold, fontSize: 12, fontWeight: FontWeight.w700))]);
 }
 
 class _Cat extends StatelessWidget {
   final IconData icon;
   final String title;
   const _Cat(this.icon, this.title);
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 108,
-      margin: const EdgeInsets.only(left: 10),
-      decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [Icon(icon, color: gold, size: 28), const SizedBox(height: 7), Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+        width: 108,
+        margin: const EdgeInsets.only(left: 10),
+        decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, color: gold, size: 28), const SizedBox(height: 7), Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))]),
+      );
 }
 
 class _Info extends StatelessWidget {
   final String text;
   const _Info(this.text);
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(20)),
-      child: Text(text, textAlign: TextAlign.center, style: const TextStyle(color: muted)),
-    );
-  }
+  Widget build(BuildContext context) => Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(20)), child: Text(text, textAlign: TextAlign.center, style: const TextStyle(color: muted)));
 }
 
 class AnimatedMarketHero extends StatefulWidget {
   const AnimatedMarketHero({super.key});
-
   @override
   State<AnimatedMarketHero> createState() => _AnimatedMarketHeroState();
 }
 
 class _AnimatedMarketHeroState extends State<AnimatedMarketHero> with SingleTickerProviderStateMixin {
   late final AnimationController controller = AnimationController(vsync: this, duration: const Duration(seconds: 7))..repeat();
-
   @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
+  void dispose() { controller.dispose(); super.dispose(); }
   @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(28),
-      child: SizedBox(
-        height: 285,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
+  Widget build(BuildContext context) => ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: SizedBox(
+          height: 285,
+          child: Stack(fit: StackFit.expand, children: [
             AnimatedBuilder(animation: controller, builder: (_, __) => CustomPaint(painter: _ScenePainter(controller.value))),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Color(0xD9000000)]),
-              ),
-            ),
+            const DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Color(0xD9000000)]))),
             const Positioned(top: 18, right: 18, child: _Pill()),
-            const Positioned(
-              right: 18,
-              left: 18,
-              bottom: 18,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('عربيتك الجاية\nيمكن تكون هنا', style: TextStyle(fontSize: 28, height: 1.02, fontWeight: FontWeight.w900)),
-                  SizedBox(height: 6),
-                  Text('ابحث • قارن • تواصل مباشرة مع المالك', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                ],
-              ),
-            ),
-          ],
+            const Positioned(right: 18, left: 18, bottom: 18, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('عربيتك الجاية\nيمكن تكون هنا', style: TextStyle(fontSize: 28, height: 1.02, fontWeight: FontWeight.w900)),
+              SizedBox(height: 6),
+              Text('ابحث • قارن • تواصل مباشرة مع المالك', style: TextStyle(color: Colors.white70, fontSize: 13)),
+            ])),
+          ]),
         ),
-      ),
-    );
-  }
+      );
 }
 
 class _Pill extends StatelessWidget {
   const _Pill();
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(30), border: Border.all(color: Colors.white24)),
-      child: const Text('من السودان للسودان 🇸🇩', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
-    );
-  }
+  Widget build(BuildContext context) => Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7), decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(30), border: Border.all(color: Colors.white24)), child: const Text('من السودان للسودان 🇸🇩', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)));
 }
 
 class _ScenePainter extends CustomPainter {
   final double t;
   _ScenePainter(this.t);
-
   @override
   void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final bg = Paint()
-      ..shader = const LinearGradient(colors: [Color(0xFF203447), Color(0xFFB96D39), Color(0xFF10151A)]).createShader(Offset.zero & size);
+    final w = size.width, h = size.height;
+    final bg = Paint()..shader = const LinearGradient(colors: [Color(0xFF203447), Color(0xFFB96D39), Color(0xFF10151A)]).createShader(Offset.zero & size);
     canvas.drawRect(Offset.zero & size, bg);
     canvas.drawCircle(Offset(w * .78, h * .23), 34, Paint()..color = gold.withOpacity(.55));
-
     final city = Paint()..color = const Color(0xFF0C1218).withOpacity(.72);
-    for (var i = 0; i < 10; i++) {
-      final buildingHeight = 34.0 + (i % 4) * 15.0;
-      canvas.drawRect(Rect.fromLTWH(i * w / 9 - 5, h * .55 - buildingHeight, 18 + (i % 3) * 9.0, buildingHeight), city);
-    }
-
+    for (var i = 0; i < 10; i++) { final bh = 34.0 + (i % 4) * 15.0; canvas.drawRect(Rect.fromLTWH(i * w / 9 - 5, h * .55 - bh, 18 + (i % 3) * 9.0, bh), city); }
     final road = Paint()..color = const Color(0xFF080B0E);
-    final roadPath = Path()
-      ..moveTo(0, h * .61)
-      ..lineTo(w, h * .56)
-      ..lineTo(w, h)
-      ..lineTo(0, h)
-      ..close();
+    final roadPath = Path()..moveTo(0, h * .61)..lineTo(w, h * .56)..lineTo(w, h)..lineTo(0, h)..close();
     canvas.drawPath(roadPath, road);
-
     final lane = Paint()..color = Colors.white12..strokeWidth = 3;
-    for (var i = -1; i < 7; i++) {
-      final x = (i * 85 + t * 170) % (w + 100) - 50;
-      canvas.drawLine(Offset(x, h * .88), Offset(x + 34, h * .76), lane);
-    }
-
+    for (var i = -1; i < 7; i++) { final x = (i * 85 + t * 170) % (w + 100) - 50; canvas.drawLine(Offset(x, h * .88), Offset(x + 34, h * .76), lane); }
     _drawCar(canvas, Offset(w * .18 + math.sin(t * math.pi * 2) * 8, h * .69), .9, false);
     _drawCar(canvas, Offset(w * .58 + math.sin(t * math.pi * 2 + 2) * 10, h * .63), .75, false);
     _drawCar(canvas, Offset(w * .82 + math.sin(t * math.pi * 2 + 4) * 12, h * .77), .6, false);
     _drawCar(canvas, Offset(w * .36, h * .83), 1.28, true);
   }
-
   void _drawCar(Canvas canvas, Offset p, double z, bool hero) {
     final body = Paint()..color = hero ? const Color(0xFFE7E9ED) : const Color(0xFF27313B);
     final glass = Paint()..color = const Color(0xFF17212B);
     final wheel = Paint()..color = Colors.black;
     final trim = Paint()..color = hero ? gold : Colors.white24;
-
     canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(p.dx - 62 * z, p.dy - 22 * z, 124 * z, 38 * z), Radius.circular(13 * z)), body);
     canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(p.dx - 35 * z, p.dy - 38 * z, 65 * z, 28 * z), Radius.circular(12 * z)), glass);
     canvas.drawCircle(Offset(p.dx - 40 * z, p.dy + 17 * z), 12 * z, wheel);
     canvas.drawCircle(Offset(p.dx + 40 * z, p.dy + 17 * z), 12 * z, wheel);
     canvas.drawLine(Offset(p.dx - 48 * z, p.dy - 2 * z), Offset(p.dx + 48 * z, p.dy - 2 * z), trim..strokeWidth = 3 * z);
-
     if (hero) {
       final skin = Paint()..color = const Color(0xFF70462F);
       final cloth = Paint()..color = Colors.white;
@@ -382,34 +286,28 @@ class _ScenePainter extends CustomPainter {
       canvas.drawCircle(Offset(p.dx + 39 * z, p.dy - 43 * z), 6 * z, skin);
     }
   }
-
   @override
   bool shouldRepaint(covariant _ScenePainter oldDelegate) => oldDelegate.t != t;
 }
 
 class ExplorePage extends StatefulWidget {
   const ExplorePage({super.key});
-
   @override
   State<ExplorePage> createState() => _ExplorePageState();
 }
 
 class _ExplorePageState extends State<ExplorePage> {
   String query = '';
-
   @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: buko_service.FirebaseService.instance.watchCars(),
-      builder: (context, snapshot) {
-        final docs = (snapshot.data?.docs ?? const []).where((doc) {
-          final data = doc.data();
-          final text = '${data['name'] ?? ''} ${data['city'] ?? ''} ${data['type'] ?? ''}'.toLowerCase();
-          return query.isEmpty || text.contains(query.toLowerCase());
-        }).toList();
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
+  Widget build(BuildContext context) => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: buko_service.FirebaseService.instance.watchCars(),
+        builder: (context, snapshot) {
+          final docs = (snapshot.data?.docs ?? const []).where((doc) {
+            final data = doc.data();
+            final text = '${data['name'] ?? ''} ${data['city'] ?? ''} ${data['type'] ?? ''}'.toLowerCase();
+            return query.isEmpty || text.contains(query.toLowerCase());
+          }).toList();
+          return ListView(padding: const EdgeInsets.all(16), children: [
             const Text('استكشاف السيارات', style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900)),
             const SizedBox(height: 6),
             const Text('اختار عربيتك من الإعلانات الموثوقة', style: TextStyle(color: muted)),
@@ -417,18 +315,15 @@ class _ExplorePageState extends State<ExplorePage> {
             TextField(onChanged: (value) => setState(() => query = value), decoration: const InputDecoration(hintText: 'الماركة أو المدينة أو النوع', prefixIcon: Icon(Icons.search))),
             const SizedBox(height: 16),
             ...docs.map((doc) => CarCard(data: doc.data(), id: doc.id)),
-          ],
-        );
-      },
-    );
-  }
+          ]);
+        },
+      );
 }
 
 class CarCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final String id;
   const CarCard({super.key, required this.data, required this.id});
-
   @override
   Widget build(BuildContext context) {
     final rawImages = data['imageUrls'];
@@ -450,16 +345,14 @@ class CarCard extends StatelessWidget {
         trailing: IconButton(
           style: IconButton.styleFrom(backgroundColor: gold.withOpacity(.12)),
           icon: const Icon(Icons.shopping_bag_outlined, color: gold),
-          onPressed: seller == null
-              ? null
-              : () async {
-                  try {
-                    await buko_service.FirebaseService.instance.createPurchaseRequest(carId: id, sellerId: seller.toString());
-                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب الشراء ✓')));
-                  } catch (error) {
-                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال الطلب: $error')));
-                  }
-                },
+          onPressed: seller == null ? null : () async {
+            try {
+              await buko_service.FirebaseService.instance.createPurchaseRequest(carId: id, sellerId: seller.toString());
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب الشراء ✓')));
+            } catch (error) {
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال الطلب: $error')));
+            }
+          },
         ),
       ),
     );
@@ -468,7 +361,6 @@ class CarCard extends StatelessWidget {
 
 class SellPage extends StatefulWidget {
   const SellPage({super.key});
-
   @override
   State<SellPage> createState() => _SellPageState();
 }
@@ -482,63 +374,31 @@ class _SellPageState extends State<SellPage> {
   final images = <XFile>[];
   String type = 'سيدان';
   bool loading = false;
-
   @override
-  void dispose() {
-    name.dispose();
-    year.dispose();
-    price.dispose();
-    city.dispose();
-    super.dispose();
-  }
-
+  void dispose() { name.dispose(); year.dispose(); price.dispose(); city.dispose(); super.dispose(); }
   Future<void> pickImages() async {
     try {
       final selected = await picker.pickMultiImage(imageQuality: 82, maxWidth: 1600);
       if (!mounted) return;
-      setState(() {
-        for (final file in selected) {
-          if (images.length >= 8) break;
-          if (!images.any((item) => item.path == file.path)) images.add(file);
-        }
-      });
-    } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر اختيار الصور: $error')));
-    }
+      setState(() { for (final file in selected) { if (images.length >= 8) break; if (!images.any((item) => item.path == file.path)) images.add(file); } });
+    } catch (error) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر اختيار الصور: $error'))); }
   }
-
   Future<void> submit() async {
     final parsedYear = int.tryParse(year.text.trim());
-    if (name.text.trim().isEmpty || parsedYear == null || price.text.trim().isEmpty || city.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أكمل بيانات السيارة أولاً')));
-      return;
-    }
+    if (name.text.trim().isEmpty || parsedYear == null || price.text.trim().isEmpty || city.text.trim().isEmpty) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أكمل بيانات السيارة أولاً'))); return; }
     setState(() => loading = true);
     try {
       final urls = <String>[];
-      for (final image in images) {
-        urls.add(await buko_service.FirebaseService.instance.uploadCarImage(await image.readAsBytes(), image.name));
-      }
+      for (final image in images) urls.add(await buko_service.FirebaseService.instance.uploadCarImage(await image.readAsBytes(), image.name));
       await buko_service.FirebaseService.instance.submitCar(name: name.text, year: parsedYear, price: price.text, city: city.text, type: type, imageUrls: urls);
       if (!mounted) return;
-      name.clear();
-      year.clear();
-      price.clear();
-      city.clear();
-      setState(() => images.clear());
+      name.clear(); year.clear(); price.clear(); city.clear(); setState(() => images.clear());
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال الإعلان للمراجعة ✓')));
-    } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر نشر الإعلان: $error')));
-    } finally {
-      if (mounted) setState(() => loading = false);
-    }
+    } catch (error) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر نشر الإعلان: $error'))); }
+    finally { if (mounted) setState(() => loading = false); }
   }
-
   @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
+  Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
         const Text('بيع سيارتك', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
         const SizedBox(height: 6),
         const Text('أضف بيانات سيارتك وسيتم مراجعتها قبل النشر.', style: TextStyle(color: muted)),
@@ -556,54 +416,27 @@ class _SellPageState extends State<SellPage> {
         OutlinedButton.icon(onPressed: loading ? null : pickImages, icon: const Icon(Icons.photo_library_outlined), label: Text(images.isEmpty ? 'أضف صور السيارة' : 'الصور: ${images.length}/8')),
         if (images.isNotEmpty) ...[
           const SizedBox(height: 10),
-          SizedBox(height: 90, child: ListView.separated(scrollDirection: Axis.horizontal, itemCount: images.length, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (_, index) => ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.memory(images[index].readAsBytes() as dynamic, width: 90, height: 90, fit: BoxFit.cover)))),
+          SizedBox(height: 90, child: ListView.separated(scrollDirection: Axis.horizontal, itemCount: images.length, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (_, index) => FutureBuilder<List<int>>(future: images[index].readAsBytes(), builder: (_, snapshot) => ClipRRect(borderRadius: BorderRadius.circular(12), child: snapshot.hasData ? Image.memory(snapshot.data!, width: 90, height: 90, fit: BoxFit.cover) : Container(width: 90, height: 90, color: const Color(0xFF1B222C), child: const Icon(Icons.image, color: gold))))))),
         ],
         const SizedBox(height: 18),
         SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: loading ? null : submit, icon: const Icon(Icons.publish), label: Text(loading ? 'جارٍ النشر...' : 'إرسال للمراجعة'))),
-      ],
-    );
-  }
+      ]);
 }
 
 class FavoritesPage extends StatelessWidget {
   const FavoritesPage({super.key});
-
   @override
   Widget build(BuildContext context) => const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.favorite_border, size: 70, color: gold), SizedBox(height: 12), Text('المفضلة', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)), SizedBox(height: 6), Text('ستظهر السيارات المحفوظة هنا', style: TextStyle(color: muted))]));
 }
 
 class AccountPage extends StatelessWidget {
   const AccountPage({super.key});
-
-  Future<bool> _isAdmin() async {
-    final user = auth.FirebaseAuth.instance.currentUser;
-    if (user == null) return false;
-    final token = await user.getIdTokenResult();
-    return token.claims?['admin'] == true;
-  }
-
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: _isAdmin(),
-      builder: (context, snapshot) {
-        return Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.person, size: 70, color: gold),
-              const SizedBox(height: 12),
-              const Text('حساب BUKO', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 18),
-              if (snapshot.data == true) ...[
-                FilledButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminPage())), icon: const Icon(Icons.admin_panel_settings), label: const Text('لوحة تحكم الإدارة')),
-                const SizedBox(height: 10),
-              ],
-              FilledButton.tonalIcon(onPressed: () => buko_service.FirebaseService.instance.signOut(), icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج')),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  Widget build(BuildContext context) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.person, size: 70, color: gold),
+        const SizedBox(height: 12),
+        const Text('حساب BUKO', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 18),
+        FilledButton.tonalIcon(onPressed: () => buko_service.FirebaseService.instance.signOut(), icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج')),
+      ]));
 }

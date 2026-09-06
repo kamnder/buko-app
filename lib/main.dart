@@ -106,18 +106,18 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 20),
               const Text('ماذا تبحث اليوم؟', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
               const SizedBox(height: 10),
-              const _SearchBox(),
+              _SearchBox(onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ExplorePage()))),
               const SizedBox(height: 20),
-              const _SectionTitle('تصفح حسب النوع'),
+              _SectionTitle('تصفح حسب النوع', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ExplorePage()))),
               const SizedBox(height: 10),
-              const SizedBox(height: 94, child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+              SizedBox(height: 94, child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
                 _Cat(Icons.directions_car_filled, 'سيدان'),
                 _Cat(Icons.directions_car, 'دفع رباعي'),
                 _Cat(Icons.local_shipping, 'بيك أب'),
                 _Cat(Icons.directions_bus, 'باص'),
               ]))),
               const SizedBox(height: 20),
-              const _SectionTitle('أحدث السيارات'),
+              _SectionTitle('أحدث السيارات', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ExplorePage()))),
               const SizedBox(height: 10),
               if (snapshot.hasError) const _Info('تعذر تحميل السيارات حالياً.'),
               if (docs.isEmpty && !snapshot.hasError) const _Info('لا توجد إعلانات منشورة بعد. كن أول من يضيف سيارة!'),
@@ -155,21 +155,38 @@ class _TopBarState extends State<_TopBar> {
           Text('BUKO', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1.3)),
           Text('سيارات مستعملة بثقة وسهولة', style: TextStyle(fontSize: 12, color: muted)),
         ])),
-        const Icon(Icons.notifications_none_rounded),
+        IconButton(
+          tooltip: 'الإشعارات',
+          onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا توجد إشعارات جديدة'))),
+          icon: const Icon(Icons.notifications_none_rounded),
+        ),
       ]);
 }
 
 class _SearchBox extends StatelessWidget {
-  const _SearchBox();
+  final VoidCallback onTap;
+  const _SearchBox({required this.onTap});
   @override
-  Widget build(BuildContext context) => Container(height: 58, padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)), child: const Row(children: [Icon(Icons.search, color: gold), SizedBox(width: 12), Expanded(child: Text('ابحث عن ماركة، موديل أو مدينة', style: TextStyle(color: muted))), Icon(Icons.tune_rounded, color: Colors.white70)]));
+  Widget build(BuildContext context) => Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: Container(height: 58, padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)), child: const Row(children: [Icon(Icons.search, color: gold), SizedBox(width: 12), Expanded(child: Text('ابحث عن ماركة، موديل أو مدينة', style: TextStyle(color: muted))), Icon(Icons.tune_rounded, color: Colors.white70)])),
+        ),
+      );
 }
 
 class _SectionTitle extends StatelessWidget {
   final String title;
-  const _SectionTitle(this.title);
+  final VoidCallback? onTap;
+  const _SectionTitle(this.title, {this.onTap});
   @override
-  Widget build(BuildContext context) => Row(children: [Expanded(child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800))), const Text('عرض الكل', style: TextStyle(color: gold, fontSize: 12, fontWeight: FontWeight.w700))]);
+  Widget build(BuildContext context) => Row(children: [
+        Expanded(child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
+        if (onTap != null)
+          TextButton(onPressed: onTap, child: const Text('عرض الكل', style: TextStyle(color: gold, fontSize: 12, fontWeight: FontWeight.w700))),
+      ]);
 }
 
 class _Cat extends StatelessWidget {
@@ -177,7 +194,14 @@ class _Cat extends StatelessWidget {
   final String title;
   const _Cat(this.icon, this.title);
   @override
-  Widget build(BuildContext context) => Container(width: 108, margin: const EdgeInsets.only(left: 10), decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, color: gold, size: 28), const SizedBox(height: 7), Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))]));
+  Widget build(BuildContext context) => Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ExplorePage(initialQuery: title))),
+          borderRadius: BorderRadius.circular(18),
+          child: Container(width: 108, margin: const EdgeInsets.only(left: 10), decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, color: gold, size: 28), const SizedBox(height: 7), Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))])),
+        ),
+      );
 }
 
 class _Info extends StatelessWidget {
@@ -263,13 +287,17 @@ class _ScenePainter extends CustomPainter {
 }
 
 class ExplorePage extends StatefulWidget {
-  const ExplorePage({super.key});
+  final String initialQuery;
+  const ExplorePage({super.key, this.initialQuery = ''});
   @override
   State<ExplorePage> createState() => _ExplorePageState();
 }
 
 class _ExplorePageState extends State<ExplorePage> {
-  String query = '';
+  late String query = widget.initialQuery;
+  late final TextEditingController controller = TextEditingController(text: widget.initialQuery);
+  @override
+  void dispose() { controller.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: buko_service.FirebaseService.instance.watchCars(),
@@ -277,19 +305,37 @@ class _ExplorePageState extends State<ExplorePage> {
           final docs = (snapshot.data?.docs ?? const []).where((doc) {
             final data = doc.data();
             final text = '${data['name'] ?? ''} ${data['city'] ?? ''} ${data['type'] ?? ''}'.toLowerCase();
-            return query.isEmpty || text.contains(query.toLowerCase());
+            return query.trim().isEmpty || text.contains(query.trim().toLowerCase());
           }).toList();
           return ListView(padding: const EdgeInsets.all(16), children: [
             const Text('استكشاف السيارات', style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900)),
             const SizedBox(height: 6),
             const Text('اختار عربيتك من الإعلانات الموثوقة', style: TextStyle(color: muted)),
             const SizedBox(height: 16),
-            TextField(onChanged: (value) => setState(() => query = value), decoration: const InputDecoration(hintText: 'الماركة أو المدينة أو النوع', prefixIcon: Icon(Icons.search))),
+            TextField(controller: controller, onChanged: (value) => setState(() => query = value), decoration: const InputDecoration(hintText: 'الماركة أو المدينة أو النوع', prefixIcon: Icon(Icons.search))),
             const SizedBox(height: 16),
+            if (snapshot.hasError) const _Info('تعذر تحميل السيارات حالياً.'),
+            if (docs.isEmpty && !snapshot.hasError) const _Info('لا توجد سيارات مطابقة للبحث.'),
             ...docs.map((doc) => CarCard(data: doc.data(), id: doc.id)),
           ]);
         },
       );
+}
+
+class FavoriteStore {
+  static final ValueNotifier<Map<String, Map<String, dynamic>>> items = ValueNotifier({});
+
+  static bool contains(String id) => items.value.containsKey(id);
+
+  static void toggle(String id, Map<String, dynamic> data) {
+    final next = Map<String, Map<String, dynamic>>.from(items.value);
+    if (next.containsKey(id)) {
+      next.remove(id);
+    } else {
+      next[id] = Map<String, dynamic>.from(data);
+    }
+    items.value = next;
+  }
 }
 
 class CarCard extends StatelessWidget {
@@ -301,15 +347,39 @@ class CarCard extends StatelessWidget {
     final rawImages = data['imageUrls'];
     final images = rawImages is List ? rawImages.whereType<String>().toList() : <String>[];
     final seller = data['sellerId'];
+    final isOwnCar = seller != null && seller.toString() == buko_service.FirebaseService.instance.currentUser?.uid;
     return Container(margin: const EdgeInsets.only(bottom: 12), decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white10)), child: ListTile(
       contentPadding: const EdgeInsets.all(9),
       leading: ClipRRect(borderRadius: BorderRadius.circular(14), child: images.isEmpty ? Container(width: 76, height: 76, color: const Color(0xFF1B222C), child: const Icon(Icons.directions_car, color: gold, size: 30)) : Image.network(images.first, width: 76, height: 76, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 76, height: 76, color: const Color(0xFF1B222C), child: const Icon(Icons.directions_car, color: gold)))),
       title: Text('${data['name'] ?? 'سيارة'} • ${data['year'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w800)),
       subtitle: Padding(padding: const EdgeInsets.only(top: 5), child: Text('${data['price'] ?? ''} • ${data['city'] ?? ''}\n${data['type'] ?? ''}', style: const TextStyle(color: muted, height: 1.45))),
-      trailing: IconButton(style: IconButton.styleFrom(backgroundColor: gold.withOpacity(.12)), icon: const Icon(Icons.shopping_bag_outlined, color: gold), onPressed: seller == null ? null : () async {
-        try { await buko_service.FirebaseService.instance.createPurchaseRequest(carId: id, sellerId: seller.toString()); if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب الشراء ✓'))); }
-        catch (error) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال الطلب: $error'))); }
-      }),
+      trailing: SizedBox(
+        width: 96,
+        child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+          ValueListenableBuilder<Map<String, Map<String, dynamic>>>(
+            valueListenable: FavoriteStore.items,
+            builder: (_, __, ___) => IconButton(
+              tooltip: FavoriteStore.contains(id) ? 'إزالة من المفضلة' : 'إضافة للمفضلة',
+              style: IconButton.styleFrom(backgroundColor: gold.withOpacity(.12)),
+              icon: Icon(FavoriteStore.contains(id) ? Icons.favorite : Icons.favorite_border, color: gold),
+              onPressed: () => FavoriteStore.toggle(id, data),
+            ),
+          ),
+          IconButton(
+            tooltip: isOwnCar ? 'لا يمكنك طلب شراء سيارتك' : 'طلب شراء',
+            style: IconButton.styleFrom(backgroundColor: gold.withOpacity(.12)),
+            icon: const Icon(Icons.shopping_bag_outlined, color: gold),
+            onPressed: seller == null || isOwnCar ? null : () async {
+              try {
+                await buko_service.FirebaseService.instance.createPurchaseRequest(carId: id, sellerId: seller.toString());
+                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب الشراء ✓')));
+              } catch (error) {
+                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال الطلب: $error')));
+              }
+            },
+          ),
+        ]),
+      ),
     ));
   }
 }
@@ -377,7 +447,19 @@ class _SellPageState extends State<SellPage> {
 class FavoritesPage extends StatelessWidget {
   const FavoritesPage({super.key});
   @override
-  Widget build(BuildContext context) => const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.favorite_border, size: 70, color: gold), SizedBox(height: 12), Text('المفضلة', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)), SizedBox(height: 6), Text('ستظهر السيارات المحفوظة هنا', style: TextStyle(color: muted))]));
+  Widget build(BuildContext context) => ValueListenableBuilder<Map<String, Map<String, dynamic>>>(
+        valueListenable: FavoriteStore.items,
+        builder: (_, items, __) {
+          if (items.isEmpty) {
+            return const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.favorite_border, size: 70, color: gold), SizedBox(height: 12), Text('المفضلة', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)), SizedBox(height: 6), Text('اضغط ❤️ على أي سيارة لحفظها هنا', style: TextStyle(color: muted))]));
+          }
+          return ListView(padding: const EdgeInsets.fromLTRB(16, 18, 16, 28), children: [
+            const Text('المفضلة', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 12),
+            ...items.entries.map((entry) => CarCard(data: entry.value, id: entry.key)),
+          ];
+        },
+      );
 }
 
 class AccountPage extends StatelessWidget {

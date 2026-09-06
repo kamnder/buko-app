@@ -1,5 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
+
+import 'image_upload_service.dart';
 
 class FirebaseService {
   FirebaseService._();
@@ -56,9 +60,9 @@ class FirebaseService {
     });
   }
 
-  // Firebase Storage is intentionally not used. The method remains as a
-  // compatibility shim for the existing sell screen and never uploads data.
-  Future<String> uploadCarImage(List<int> bytes, String fileName) async => '';
+  Future<String> uploadCarImage(Uint8List bytes, String fileName) {
+    return ImageUploadService.instance.uploadCarImage(bytes, fileName);
+  }
 
   Future<void> createPurchaseRequest({
     required String carId,

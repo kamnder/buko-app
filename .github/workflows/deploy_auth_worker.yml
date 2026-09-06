@@ -32,16 +32,7 @@ jobs:
         run: |
           set -euo pipefail
           missing=0
-          check_secret() {
-            local name="$1"
-            local value="$2"
-            if [ -z "$value" ]; then
-              echo "MISSING_SECRET:$name"
-              missing=1
-            else
-              echo "SECRET_OK:$name"
-            fi
-          }
+          check_secret() { local name="$1"; local value="$2"; if [ -z "$value" ]; then echo "MISSING_SECRET:$name"; missing=1; else echo "SECRET_OK:$name"; fi; }
           check_secret CLOUDFLARE_API_TOKEN "$CLOUDFLARE_API_TOKEN"
           check_secret CLOUDFLARE_ACCOUNT_ID "$CLOUDFLARE_ACCOUNT_ID"
           check_secret BUKO_FIREBASE_CLIENT_EMAIL "$FIREBASE_CLIENT_EMAIL"
@@ -57,13 +48,9 @@ jobs:
         run: |
           set -euo pipefail
           DB_ID=$(npx wrangler d1 list --json | jq -r '.[] | select(.name == "buko-auth") | .uuid' | head -n1)
-          if [ -z "$DB_ID" ]; then
-            npx wrangler d1 create buko-auth --json > /tmp/d1.json
-            DB_ID=$(jq -r '.database_id' /tmp/d1.json)
-          fi
+          if [ -z "$DB_ID" ]; then npx wrangler d1 create buko-auth --json > /tmp/d1.json; DB_ID=$(jq -r '.database_id' /tmp/d1.json); fi
           test -n "$DB_ID"
           sed -i "s/REPLACE_WITH_D1_DATABASE_ID/$DB_ID/" wrangler.toml
-          echo "D1 database ready"
       - name: Configure Firebase public API key
         working-directory: auth-worker
         env:
@@ -73,11 +60,7 @@ jobs:
           python3 - <<'PY'
           import os
           from pathlib import Path
-          p = Path('wrangler.toml')
-          s = p.read_text()
-          key = os.environ['FIREBASE_API_KEY'].strip()
-          s = s.replace('REPLACE_WITH_FIREBASE_WEB_API_KEY', key)
-          p.write_text(s)
+          p=Path('wrangler.toml'); s=p.read_text(); s=s.replace('REPLACE_WITH_FIREBASE_WEB_API_KEY',os.environ['FIREBASE_API_KEY'].strip()); p.write_text(s)
           PY
       - name: Store Firebase signing secrets in Worker
         working-directory: auth-worker
@@ -104,14 +87,11 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy --config wrangler.toml
       - name: Verify Firebase custom-token exchange
-        working-directory: auth-worker
         env:
           BUKO_ADMIN_BOOTSTRAP_SECRET: ${{ secrets.BUKO_ADMIN_BOOTSTRAP_SECRET }}
         run: |
           set -euo pipefail
-          RESPONSE=$(curl -sS -X POST 'https://buko-auth-worker.buko-auth.workers.dev/auth/self-test' \
-            -H 'Content-Type: application/json' \
-            --data-binary "$(python3 - <<'PY'
+          RESPONSE=$(curl -sS -X POST 'https://buko-auth-worker.buko-auth.workers.dev/auth/self-test' -H 'Content-Type: application/json' --data-binary "$(python3 - <<'PY'
           import json, os
           print(json.dumps({'secret': os.environ['BUKO_ADMIN_BOOTSTRAP_SECRET']}))
           PY
@@ -119,4 +99,4 @@ jobs:
           echo "$RESPONSE"
           echo "$RESPONSE" | grep -q '"ok":true'
 
-# Credential refresh verification trigger: redeploy Worker with refreshed Firebase service-account email.
+# Final credential-confirmation redeploy.

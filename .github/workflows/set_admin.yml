@@ -1,0 +1,73 @@
+name: Set BUKO Admin
+
+on:
+  workflow_dispatch:
+    inputs:
+      admin_email:
+        description: "Firebase admin email"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  set-admin:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Firebase Admin SDK
+        run: |
+          npm init -y
+          npm install firebase-admin
+
+      - name: Set admin claim
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          ADMIN_EMAIL: ${{ inputs.admin_email }}
+        run: |
+          set -euo pipefail
+
+          test -n "$FIREBASE_SERVICE_ACCOUNT"
+          test -n "$ADMIN_EMAIL"
+
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > firebase-service-account.json
+
+          cat > set-admin.js <<'EOF'
+          const admin = require('firebase-admin');
+
+          const serviceAccount = require('./firebase-service-account.json');
+
+          admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+          });
+
+          async function main() {
+            const email = process.env.ADMIN_EMAIL.trim();
+
+            const user = await admin.auth().getUserByEmail(email);
+
+            await admin.auth().setCustomUserClaims(user.uid, {
+              ...(user.customClaims || {}),
+              admin: true
+            });
+
+            console.log('ADMIN_ENABLED');
+            console.log(`UID: ${user.uid}`);
+            console.log(`EMAIL: ${user.email}`);
+          }
+
+          main().catch(error => {
+            console.error(error);
+            process.exit(1);
+          });
+          EOF
+
+          node set-admin.js
+
+          rm -f firebase-service-account.json set-admin.js

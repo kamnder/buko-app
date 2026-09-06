@@ -81,7 +81,7 @@ jobs:
       - name: Build release APK
         env:
           BUKO_CLOUDINARY_CLOUD_NAME: ${{ secrets.BUKO_CLOUDINARY_CLOUD_NAME }}
-          BUKO_CLOUDINARY_UPLOAD_PRESET: ${{ secrets.BUKO_CLOUDINARY_UPLOAD_PRESET }}
+          BUKO_CLOUDINARY_UPLOAD_PRESET: ${{ secrets.BUKO_CLOUDINARY_UPLOAD_PRESET || 'buko_cars' }}
         run: |
           set -euo pipefail
           test -n "$BUKO_CLOUDINARY_CLOUD_NAME"

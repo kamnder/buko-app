@@ -54,11 +54,25 @@ jobs:
           printf '%s' "$AUTH_ENDPOINT" | grep -Eq '^https://[^[:space:]]+$'
           echo "BUKO_AUTH_ENDPOINT=$AUTH_ENDPOINT" >> "$GITHUB_ENV"
 
-      - name: Validate Firebase Auth API key
+      - name: Configure and validate Firebase API key
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
         run: |
           set -euo pipefail
-          API_KEY='AIzaSyAtClN06FLtjOaMDzLnJeYspEIqTtV0Xj0'
-          RESPONSE=$(curl -sS -X POST "https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${API_KEY}" \
+          test -n "$FIREBASE_API_KEY"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          p = Path('lib/firebase_options.dart')
+          s = p.read_text()
+          key = os.environ['FIREBASE_API_KEY'].strip()
+          import re
+          s, count = re.subn(r"apiKey:\s*'[^']*'", "apiKey: '" + key.replace("'", "\\'") + "'", s, count=1)
+          if count != 1:
+              raise SystemExit('firebase apiKey field not found')
+          p.write_text(s)
+          PY
+          RESPONSE=$(curl -sS -X POST "https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${FIREBASE_API_KEY}" \
             -H 'Content-Type: application/json' \
             --data-binary '{"token":"BUKO_INVALID_TEST_TOKEN","returnSecureToken":true}')
           echo "$RESPONSE"

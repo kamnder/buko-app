@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 
 class BukoAnimatedBackground extends StatefulWidget {
   final Widget child;
-  const BukoAnimatedBackground({super.key, required this.child});
+  final double opacity;
+  const BukoAnimatedBackground({super.key, required this.child, this.opacity = .16});
   @override State<BukoAnimatedBackground> createState() => _BukoAnimatedBackgroundState();
 }
 
@@ -11,7 +12,7 @@ class _BukoAnimatedBackgroundState extends State<BukoAnimatedBackground> with Si
   late final AnimationController _controller = AnimationController(vsync: this, duration: const Duration(seconds: 14))..repeat();
   @override void dispose(){_controller.dispose();super.dispose();}
   @override Widget build(BuildContext context)=>Stack(fit:StackFit.expand,children:[
-    AnimatedBuilder(animation:_controller,builder:(_,__)=>CustomPaint(painter:_MiniCarsPainter(_controller.value))),
+    Opacity(opacity: widget.opacity, child: AnimatedBuilder(animation:_controller,builder:(_,__)=>CustomPaint(painter:_MiniCarsPainter(_controller.value)))),
     widget.child,
   ]);
 }
@@ -20,7 +21,7 @@ class _MiniCarsPainter extends CustomPainter {
   final double t; _MiniCarsPainter(this.t);
   @override void paint(Canvas c, Size s){
     c.drawRect(Offset.zero&s, Paint()..color=const Color(0xFF080B10));
-    final glow=Paint()..shader=const RadialGradient(colors:[Color(0x33204A68),Color(0x00080B10)]).createShader(Rect.fromCircle(center:Offset(s.width*.5,s.height*.2),radius:s.width*.8));
+    final glow=Paint()..shader=const RadialGradient(colors:[Color(0x55204A68),Color(0x00080B10)]).createShader(Rect.fromCircle(center:Offset(s.width*.5,s.height*.2),radius:s.width*.8));
     c.drawRect(Offset.zero&s,glow);
     for(int i=0;i<7;i++){
       final y=s.height*(.16+i*.125); final x=((t*(s.width+180)*(.55+i*.07)+i*150)%(s.width+220))-110;

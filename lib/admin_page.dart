@@ -140,7 +140,7 @@ class _AdminPageState extends State<AdminPage> {
           final short = doc.id.substring(0, doc.id.length > 7 ? 7 : doc.id.length);
           return _GlassCard(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Row(children: [
-              const CircleAvatar(backgroundColor: Color(0x1FFF B51B), child: Icon(Icons.shopping_cart_outlined, color: _gold)),
+              const CircleAvatar(backgroundColor: Color(0x1FFFB51B), child: Icon(Icons.shopping_cart_outlined, color: _gold)),
               const SizedBox(width: 10), Expanded(child: Text('طلب شراء #$short', style: const TextStyle(fontWeight: FontWeight.w900))), _StatusBadge(status: status),
             ]),
             const SizedBox(height: 12),

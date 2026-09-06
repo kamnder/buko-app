@@ -8,7 +8,7 @@ on:
 permissions:
   contents: write
 
-# Final integrated BUKO build: phone/password auth + Firebase + animated UI + admin.
+# FINAL BUILD — backend verified, phone/password only, Firebase, animated UI, admin.
 
 jobs:
   build:

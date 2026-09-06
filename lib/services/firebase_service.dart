@@ -10,7 +10,9 @@ class FirebaseService {
 
   final auth.FirebaseAuth _auth = auth.FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instanceFor(
+    bucket: 'gs://buko-6f769.firebasestorage.app',
+  );
 
   auth.User? get currentUser => _auth.currentUser;
   Stream<auth.User?> get authState => _auth.authStateChanges();
@@ -31,8 +33,11 @@ class FirebaseService {
     }, SetOptions(merge: true));
   }
 
-  Stream<QuerySnapshot<Map<String, dynamic>>> watchCars() =>
-      _db.collection('cars').where('status', isEqualTo: 'approved').orderBy('createdAt', descending: true).snapshots();
+  Stream<QuerySnapshot<Map<String, dynamic>>> watchCars() => _db
+      .collection('cars')
+      .where('status', isEqualTo: 'approved')
+      .orderBy('createdAt', descending: true)
+      .snapshots();
 
   Future<DocumentReference<Map<String, dynamic>>> submitCar({
     required String name,
@@ -60,9 +65,23 @@ class FirebaseService {
   Future<String> uploadCarImage(Uint8List bytes, String fileName) async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) throw StateError('يجب تسجيل الدخول أولاً');
-    final ref = _storage.ref('cars/$uid/${DateTime.now().millisecondsSinceEpoch}_$fileName');
-    await ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
+    final safeName = fileName.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+    final ref = _storage.ref().child(
+      'cars/$uid/${DateTime.now().millisecondsSinceEpoch}_$safeName',
+    );
+    await ref.putData(
+      bytes,
+      SettableMetadata(contentType: _contentType(safeName)),
+    );
     return ref.getDownloadURL();
+  }
+
+  String _contentType(String fileName) {
+    final lower = fileName.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.heic') || lower.endsWith('.heif')) return 'image/heic';
+    return 'image/jpeg';
   }
 
   Future<void> createPurchaseRequest({
@@ -83,6 +102,10 @@ class FirebaseService {
   Stream<QuerySnapshot<Map<String, dynamic>>> watchMyRequests() {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return const Stream.empty();
-    return _db.collection('purchaseRequests').where('buyerId', isEqualTo: uid).orderBy('createdAt', descending: true).snapshots();
+    return _db
+        .collection('purchaseRequests')
+        .where('buyerId', isEqualTo: uid)
+        .orderBy('createdAt', descending: true)
+        .snapshots();
   }
 }

@@ -45,16 +45,16 @@ jobs:
       - name: Test
         run: flutter test
 
-      - name: Validate auth endpoint
+      - name: Resolve auth endpoint
         env:
           BUKO_AUTH_ENDPOINT: ${{ secrets.BUKO_AUTH_ENDPOINT }}
         run: |
-          test -n "$BUKO_AUTH_ENDPOINT"
-          printf '%s' "$BUKO_AUTH_ENDPOINT" | grep -Eq '^https://[^[:space:]]+$'
+          set -euo pipefail
+          AUTH_ENDPOINT="${BUKO_AUTH_ENDPOINT:-https://buko-auth-worker.buko-auth.workers.dev}"
+          printf '%s' "$AUTH_ENDPOINT" | grep -Eq '^https://[^[:space:]]+$'
+          echo "BUKO_AUTH_ENDPOINT=$AUTH_ENDPOINT" >> "$GITHUB_ENV"
 
       - name: Build release APK
-        env:
-          BUKO_AUTH_ENDPOINT: ${{ secrets.BUKO_AUTH_ENDPOINT }}
         run: flutter build apk --release --dart-define=BUKO_AUTH_ENDPOINT="$BUKO_AUTH_ENDPOINT"
 
       - name: Verify APK

@@ -8,7 +8,7 @@ on:
 permissions:
   contents: write
 
-# FINAL BUILD — backend verified, phone/password only, Firebase Firestore, animated UI, admin.
+# FINAL BUILD — backend verified, phone/password only, Firestore, Cloudinary images, animated UI, admin.
 
 jobs:
   build:
@@ -106,7 +106,17 @@ jobs:
           rm -f /tmp/buko-firebase-service-account.json
 
       - name: Build release APK
-        run: flutter build apk --release --dart-define=BUKO_AUTH_ENDPOINT="$BUKO_AUTH_ENDPOINT"
+        env:
+          BUKO_CLOUDINARY_CLOUD_NAME: ${{ secrets.BUKO_CLOUDINARY_CLOUD_NAME }}
+          BUKO_CLOUDINARY_UPLOAD_PRESET: ${{ secrets.BUKO_CLOUDINARY_UPLOAD_PRESET }}
+        run: |
+          set -euo pipefail
+          test -n "$BUKO_CLOUDINARY_CLOUD_NAME"
+          test -n "$BUKO_CLOUDINARY_UPLOAD_PRESET"
+          flutter build apk --release \
+            --dart-define=BUKO_AUTH_ENDPOINT="$BUKO_AUTH_ENDPOINT" \
+            --dart-define=BUKO_CLOUDINARY_CLOUD_NAME="$BUKO_CLOUDINARY_CLOUD_NAME" \
+            --dart-define=BUKO_CLOUDINARY_UPLOAD_PRESET="$BUKO_CLOUDINARY_UPLOAD_PRESET"
 
       - name: Verify APK
         run: |

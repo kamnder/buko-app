@@ -98,5 +98,15 @@ jobs:
           )")
           echo "$RESPONSE"
           echo "$RESPONSE" | grep -q '"ok":true'
-
-# Final credential-confirmation redeploy.
+      - name: Verify provisioned admin account
+        env:
+          BUKO_ADMIN_BOOTSTRAP_SECRET: ${{ secrets.BUKO_ADMIN_BOOTSTRAP_SECRET }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -sS -X POST 'https://buko-auth-worker.buko-auth.workers.dev/auth/admin-self-test' -H 'Content-Type: application/json' --data-binary "$(python3 - <<'PY'
+          import json, os
+          print(json.dumps({'secret': os.environ['BUKO_ADMIN_BOOTSTRAP_SECRET']}))
+          PY
+          )")
+          echo "$RESPONSE"
+          echo "$RESPONSE" | grep -q '"ok":true'

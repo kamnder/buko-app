@@ -1,8 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
-import 'package:firebase_storage/firebase_storage.dart';
 
 class FirebaseService {
   FirebaseService._();
@@ -10,9 +7,6 @@ class FirebaseService {
 
   final auth.FirebaseAuth _auth = auth.FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instanceFor(
-    bucket: 'gs://buko-6f769.firebasestorage.app',
-  );
 
   auth.User? get currentUser => _auth.currentUser;
   Stream<auth.User?> get authState => _auth.authStateChanges();
@@ -56,33 +50,15 @@ class FirebaseService {
       'city': city.trim(),
       'type': type.trim(),
       'sellerId': uid,
-      'imageUrls': imageUrls,
+      'imageUrls': imageUrls.where((url) => url.trim().isNotEmpty).toList(),
       'status': 'pending',
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
 
-  Future<String> uploadCarImage(Uint8List bytes, String fileName) async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) throw StateError('يجب تسجيل الدخول أولاً');
-    final safeName = fileName.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
-    final ref = _storage.ref().child(
-      'cars/$uid/${DateTime.now().millisecondsSinceEpoch}_$safeName',
-    );
-    await ref.putData(
-      bytes,
-      SettableMetadata(contentType: _contentType(safeName)),
-    );
-    return ref.getDownloadURL();
-  }
-
-  String _contentType(String fileName) {
-    final lower = fileName.toLowerCase();
-    if (lower.endsWith('.png')) return 'image/png';
-    if (lower.endsWith('.webp')) return 'image/webp';
-    if (lower.endsWith('.heic') || lower.endsWith('.heif')) return 'image/heic';
-    return 'image/jpeg';
-  }
+  // Firebase Storage is intentionally not used. The method remains as a
+  // compatibility shim for the existing sell screen and never uploads data.
+  Future<String> uploadCarImage(List<int> bytes, String fileName) async => '';
 
   Future<void> createPurchaseRequest({
     required String carId,

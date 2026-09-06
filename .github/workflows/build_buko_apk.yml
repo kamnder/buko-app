@@ -78,6 +78,18 @@ jobs:
           echo "$RESPONSE"
           echo "$RESPONSE" | grep -q 'INVALID_CUSTOM_TOKEN'
 
+      - name: Deploy Firestore rules
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          set -euo pipefail
+          test -n "$FIREBASE_SERVICE_ACCOUNT" || { echo 'Missing required GitHub secret: FIREBASE_SERVICE_ACCOUNT'; exit 1; }
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
+          python3 -m json.tool "$RUNNER_TEMP/firebase-service-account.json" >/dev/null
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-service-account.json"
+          npx --yes firebase-tools@latest deploy --only firestore:rules --project buko-6f769 --non-interactive
+          rm -f "$RUNNER_TEMP/firebase-service-account.json"
+
       - name: Build release APK
         env:
           BUKO_CLOUDINARY_CLOUD_NAME: ${{ secrets.BUKO_CLOUDINARY_CLOUD_NAME }}

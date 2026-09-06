@@ -8,7 +8,7 @@ on:
 permissions:
   contents: write
 
-# FINAL BUILD — backend verified, phone/password only, Firestore, Cloudinary images, animated UI, admin.
+# FINAL BUILD — backend verified, phone/password only, Cloudinary images, animated UI, admin.
 
 jobs:
   build:
@@ -77,33 +77,6 @@ jobs:
             --data-binary '{"token":"BUKO_INVALID_TEST_TOKEN","returnSecureToken":true}')
           echo "$RESPONSE"
           echo "$RESPONSE" | grep -q 'INVALID_CUSTOM_TOKEN'
-
-      - name: Deploy Firestore rules and indexes
-        env:
-          FIREBASE_CLIENT_EMAIL: ${{ secrets.BUKO_FIREBASE_CLIENT_EMAIL }}
-          FIREBASE_PRIVATE_KEY: ${{ secrets.BUKO_FIREBASE_PRIVATE_KEY }}
-        run: |
-          set -euo pipefail
-          test -n "$FIREBASE_CLIENT_EMAIL"
-          test -n "$FIREBASE_PRIVATE_KEY"
-          python3 - <<'PY'
-          import json, os
-          from pathlib import Path
-          key = os.environ['FIREBASE_PRIVATE_KEY'].replace('\\n', '\n')
-          credentials = {
-              'type': 'service_account',
-              'project_id': 'buko-6f769',
-              'private_key_id': 'runtime',
-              'private_key': key,
-              'client_email': os.environ['FIREBASE_CLIENT_EMAIL'].strip(),
-              'client_id': 'runtime',
-              'token_uri': 'https://oauth2.googleapis.com/token',
-          }
-          Path('/tmp/buko-firebase-service-account.json').write_text(json.dumps(credentials))
-          PY
-          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/buko-firebase-service-account.json
-          npx --yes firebase-tools@latest deploy --project buko-6f769 --only firestore:rules,firestore:indexes
-          rm -f /tmp/buko-firebase-service-account.json
 
       - name: Build release APK
         env:

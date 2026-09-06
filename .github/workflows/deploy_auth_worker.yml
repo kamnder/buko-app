@@ -29,11 +29,24 @@ jobs:
           FIREBASE_PRIVATE_KEY: ${{ secrets.BUKO_FIREBASE_PRIVATE_KEY }}
           ADMIN_BOOTSTRAP_SECRET: ${{ secrets.BUKO_ADMIN_BOOTSTRAP_SECRET }}
         run: |
-          test -n "$CLOUDFLARE_API_TOKEN"
-          test -n "$CLOUDFLARE_ACCOUNT_ID"
-          test -n "$FIREBASE_CLIENT_EMAIL"
-          test -n "$FIREBASE_PRIVATE_KEY"
-          test -n "$ADMIN_BOOTSTRAP_SECRET"
+          set -euo pipefail
+          missing=0
+          check_secret() {
+            local name="$1"
+            local value="$2"
+            if [ -z "$value" ]; then
+              echo "MISSING_SECRET:$name"
+              missing=1
+            else
+              echo "SECRET_OK:$name"
+            fi
+          }
+          check_secret CLOUDFLARE_API_TOKEN "$CLOUDFLARE_API_TOKEN"
+          check_secret CLOUDFLARE_ACCOUNT_ID "$CLOUDFLARE_ACCOUNT_ID"
+          check_secret BUKO_FIREBASE_CLIENT_EMAIL "$FIREBASE_CLIENT_EMAIL"
+          check_secret BUKO_FIREBASE_PRIVATE_KEY "$FIREBASE_PRIVATE_KEY"
+          check_secret BUKO_ADMIN_BOOTSTRAP_SECRET "$ADMIN_BOOTSTRAP_SECRET"
+          test "$missing" -eq 0
       - name: Create or find D1 database
         working-directory: auth-worker
         env:

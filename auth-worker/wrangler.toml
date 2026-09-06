@@ -2,6 +2,7 @@ name = "buko-auth-worker"
 main = "src/index.js"
 compatibility_date = "2026-09-01"
 
+# BUKO auth deployment configuration
 [[d1_databases]]
 binding = "DB"
 database_name = "buko-auth"

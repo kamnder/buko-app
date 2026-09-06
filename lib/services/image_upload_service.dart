@@ -47,9 +47,9 @@ class ImageUploadService {
 
         if (normalized.contains('unknown api key') ||
             normalized.contains('api key null') ||
-            normalized.contains('upload preset') && normalized.contains('unsigned')) {
+            (normalized.contains('upload preset') && normalized.contains('unsigned'))) {
           throw StateError(
-            'Cloudinary رفض رفع الصورة: إعداد Upload Preset "$ _uploadPreset" يجب أن يكون Unsigned. '
+            'Cloudinary رفض رفع الصورة: إعداد Upload Preset "$_uploadPreset" يجب أن يكون Unsigned. '
             'تحقق من إعدادات Cloudinary ثم أعد المحاولة.',
           );
         }

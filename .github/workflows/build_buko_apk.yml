@@ -8,7 +8,7 @@ on:
 permissions:
   contents: write
 
-# Final integrated BUKO build: phone/password auth + Firebase backend + animated auth scene.
+# Final integrated BUKO build: phone/password auth + Firebase + animated UI + admin.
 
 jobs:
   build:
@@ -46,7 +46,9 @@ jobs:
         run: flutter test
 
       - name: Build release APK
-        run: flutter build apk --release
+        env:
+          BUKO_AUTH_ENDPOINT: ${{ secrets.BUKO_AUTH_ENDPOINT }}
+        run: flutter build apk --release --dart-define=BUKO_AUTH_ENDPOINT="$BUKO_AUTH_ENDPOINT"
 
       - name: Verify APK
         run: |

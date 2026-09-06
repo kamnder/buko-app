@@ -1,0 +1,13 @@
+name = "buko-auth-worker"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "buko-auth"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[vars]
+FIREBASE_PROJECT_ID = "buko-6f769"
+FIREBASE_API_KEY = "REPLACE_WITH_FIREBASE_WEB_API_KEY"

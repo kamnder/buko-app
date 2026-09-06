@@ -1,0 +1,13 @@
+{
+  "name": "buko-auth-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "wrangler": "^4.39.0"
+  },
+  "devDependencies": {}
+}

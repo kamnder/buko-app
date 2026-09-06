@@ -6,7 +6,11 @@ class PhonePasswordAuthService {
   PhonePasswordAuthService._();
   static final instance = PhonePasswordAuthService._();
 
-  static const endpoint = 'https://us-central1-buko-6f769.cloudfunctions.net/phonePasswordAuth';
+  // Set BUKO_AUTH_ENDPOINT in the final APK build. This keeps the Worker URL out of source.
+  static const endpoint = String.fromEnvironment(
+    'BUKO_AUTH_ENDPOINT',
+    defaultValue: 'https://REPLACE_WITH_BUKO_AUTH_WORKER_URL',
+  );
 
   Future<auth.UserCredential> register({
     required String phone,
@@ -25,11 +29,15 @@ class PhonePasswordAuthService {
     required String password,
     String? name,
   }) async {
+    if (endpoint.contains('REPLACE_WITH_BUKO_AUTH_WORKER_URL')) {
+      throw const PhonePasswordAuthException('auth-endpoint-not-configured');
+    }
+
+    final path = action == 'register' ? '/auth/register' : '/auth/login';
     final response = await http.post(
-      Uri.parse(endpoint),
+      Uri.parse('$endpoint$path'),
       headers: const {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'action': action,
         'phone': phone,
         'password': password,
         if (name != null) 'name': name,
@@ -46,7 +54,10 @@ class PhonePasswordAuthService {
     }
 
     final token = data['token']?.toString();
-    if (token == null || token.isEmpty) throw const PhonePasswordAuthException('server-error');
+    if (token == null || token.isEmpty) {
+      throw const PhonePasswordAuthException('server-error');
+    }
+
     return auth.FirebaseAuth.instance.signInWithCustomToken(token);
   }
 }

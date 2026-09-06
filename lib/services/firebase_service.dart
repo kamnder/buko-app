@@ -15,12 +15,6 @@ class FirebaseService {
   auth.User? get currentUser => _auth.currentUser;
   Stream<auth.User?> get authState => _auth.authStateChanges();
 
-  Future<auth.UserCredential> signInWithEmail(String email, String password) =>
-      _auth.signInWithEmailAndPassword(email: email.trim(), password: password);
-
-  Future<auth.UserCredential> registerWithEmail(String email, String password) =>
-      _auth.createUserWithEmailAndPassword(email: email.trim(), password: password);
-
   Future<void> signOut() => _auth.signOut();
 
   Future<void> saveUserProfile({

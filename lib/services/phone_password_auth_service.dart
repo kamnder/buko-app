@@ -6,10 +6,10 @@ class PhonePasswordAuthService {
   PhonePasswordAuthService._();
   static final instance = PhonePasswordAuthService._();
 
-  // Set BUKO_AUTH_ENDPOINT in the final APK build. This keeps the Worker URL out of source.
+  // Public Worker endpoint; the build may override it with BUKO_AUTH_ENDPOINT.
   static const endpoint = String.fromEnvironment(
     'BUKO_AUTH_ENDPOINT',
-    defaultValue: 'https://REPLACE_WITH_BUKO_AUTH_WORKER_URL',
+    defaultValue: 'https://buko-auth-worker.buko-auth.workers.dev',
   );
 
   Future<auth.UserCredential> register({
@@ -29,10 +29,6 @@ class PhonePasswordAuthService {
     required String password,
     String? name,
   }) async {
-    if (endpoint.contains('REPLACE_WITH_BUKO_AUTH_WORKER_URL')) {
-      throw const PhonePasswordAuthException('auth-endpoint-not-configured');
-    }
-
     final path = action == 'register' ? '/auth/register' : '/auth/login';
     final response = await http.post(
       Uri.parse('$endpoint$path'),

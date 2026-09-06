@@ -54,6 +54,16 @@ jobs:
           printf '%s' "$AUTH_ENDPOINT" | grep -Eq '^https://[^[:space:]]+$'
           echo "BUKO_AUTH_ENDPOINT=$AUTH_ENDPOINT" >> "$GITHUB_ENV"
 
+      - name: Validate Firebase Auth API key
+        run: |
+          set -euo pipefail
+          API_KEY='AIzaSyAtClN06FLtjOaMDzLnJeYspEIqTtV0Xj0'
+          RESPONSE=$(curl -sS -X POST "https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${API_KEY}" \
+            -H 'Content-Type: application/json' \
+            --data-binary '{"token":"BUKO_INVALID_TEST_TOKEN","returnSecureToken":true}')
+          echo "$RESPONSE"
+          echo "$RESPONSE" | grep -q 'INVALID_CUSTOM_TOKEN'
+
       - name: Build release APK
         run: flutter build apk --release --dart-define=BUKO_AUTH_ENDPOINT="$BUKO_AUTH_ENDPOINT"
 

@@ -1,0 +1,12 @@
+name: Final BUKO rebuild
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trigger build
+        run: echo "Final rebuild requested after Firebase credential verification fix"

@@ -8,7 +8,7 @@ on:
 permissions:
   contents: write
 
-# FINAL BUILD — backend verified, phone/password only, Firebase, animated UI, admin.
+# FINAL BUILD — backend verified, phone/password only, Firebase Firestore, animated UI, admin.
 
 jobs:
   build:
@@ -78,7 +78,7 @@ jobs:
           echo "$RESPONSE"
           echo "$RESPONSE" | grep -q 'INVALID_CUSTOM_TOKEN'
 
-      - name: Deploy Firebase rules and indexes
+      - name: Deploy Firestore rules and indexes
         env:
           FIREBASE_CLIENT_EMAIL: ${{ secrets.BUKO_FIREBASE_CLIENT_EMAIL }}
           FIREBASE_PRIVATE_KEY: ${{ secrets.BUKO_FIREBASE_PRIVATE_KEY }}
@@ -102,7 +102,7 @@ jobs:
           Path('/tmp/buko-firebase-service-account.json').write_text(json.dumps(credentials))
           PY
           export GOOGLE_APPLICATION_CREDENTIALS=/tmp/buko-firebase-service-account.json
-          npx --yes firebase-tools@latest deploy --project buko-6f769 --only firestore:rules,firestore:indexes,storage
+          npx --yes firebase-tools@latest deploy --project buko-6f769 --only firestore:rules,firestore:indexes
           rm -f /tmp/buko-firebase-service-account.json
 
       - name: Build release APK

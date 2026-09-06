@@ -45,6 +45,13 @@ jobs:
       - name: Test
         run: flutter test
 
+      - name: Validate auth endpoint
+        env:
+          BUKO_AUTH_ENDPOINT: ${{ secrets.BUKO_AUTH_ENDPOINT }}
+        run: |
+          test -n "$BUKO_AUTH_ENDPOINT"
+          printf '%s' "$BUKO_AUTH_ENDPOINT" | grep -Eq '^https://[^[:space:]]+$'
+
       - name: Build release APK
         env:
           BUKO_AUTH_ENDPOINT: ${{ secrets.BUKO_AUTH_ENDPOINT }}

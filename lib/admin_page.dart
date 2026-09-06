@@ -40,19 +40,16 @@ class _AdminPageState extends State<AdminPage> {
       child: Scaffold(
         backgroundColor: _ink,
         appBar: AppBar(backgroundColor: Colors.transparent, title: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('لوحة تحكم BUKO', style: TextStyle(fontWeight: FontWeight.w900)), Text('إدارة المنصة والمستخدمين والطلبات', style: TextStyle(fontSize: 11, color: _muted))])),
-        body: Stack(children: [
-          const Positioned.fill(child: IgnorePointer(child: BukoAnimatedBackground(opacity: .18))),
-          Column(children: [
-            _DashboardSummary(db: _db),
-            const SizedBox(height: 8),
-            Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: SegmentedButton<int>(
-              segments: const [ButtonSegment(value: 0, icon: Icon(Icons.directions_car_outlined), label: Text('السيارات')), ButtonSegment(value: 1, icon: Icon(Icons.people_outline), label: Text('المستخدمون')), ButtonSegment(value: 2, icon: Icon(Icons.shopping_bag_outlined), label: Text('الطلبات'))],
-              selected: {_tab}, onSelectionChanged: (v) => setState(() => _tab = v.first),
-            )),
-            const SizedBox(height: 8),
-            Expanded(child: IndexedStack(index: _tab, children: [_cars(), _users(), _requests()])),
-          ]),
-        ]),
+        body: BukoAnimatedBackground(child: Column(children: [
+          _DashboardSummary(db: _db),
+          const SizedBox(height: 8),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: SegmentedButton<int>(
+            segments: const [ButtonSegment(value: 0, icon: Icon(Icons.directions_car_outlined), label: Text('السيارات')), ButtonSegment(value: 1, icon: Icon(Icons.people_outline), label: Text('المستخدمون')), ButtonSegment(value: 2, icon: Icon(Icons.shopping_bag_outlined), label: Text('الطلبات'))],
+            selected: {_tab}, onSelectionChanged: (v) => setState(() => _tab = v.first),
+          )),
+          const SizedBox(height: 8),
+          Expanded(child: IndexedStack(index: _tab, children: [_cars(), _users(), _requests()])),
+        ])),
       ),
     );
   }
@@ -83,7 +80,7 @@ class _AdminPageState extends State<AdminPage> {
       if (!snap.hasData) return const Center(child: CircularProgressIndicator());
       final docs = [...snap.data!.docs]..sort((a, b) { final aa = a.data()['createdAt']; final bb = b.data()['createdAt']; if (aa is Timestamp && bb is Timestamp) return bb.compareTo(aa); return 0; });
       if (docs.isEmpty) return const _EmptyState(icon: Icons.people_outline, text: 'لا يوجد مستخدمون بعد');
-      return ListView.separated(padding: const EdgeInsets.fromLTRB(16, 8, 16, 28), itemCount: docs.length, separatorBuilder: (_, __) => const SizedBox(height: 9), itemBuilder: (_, i) { final d = docs[i].data(); return _GlassCard(child: ListTile(contentPadding: EdgeInsets.zero, leading: CircleAvatar(backgroundColor: _gold.withOpacity(.16), child: const Icon(Icons.person, color: _gold)), title: Text(d['name'] ?? 'مستخدم', style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Text('${d['phone'] ?? '-'}\nUID: ${docs[i].id}', style: const TextStyle(color: _muted, fontSize: 11)), trailing: _RoleBadge(role: '${d['role'] ?? 'buyer']}'))); });
+      return ListView.separated(padding: const EdgeInsets.fromLTRB(16, 8, 16, 28), itemCount: docs.length, separatorBuilder: (_, __) => const SizedBox(height: 9), itemBuilder: (_, i) { final d = docs[i].data(); return _GlassCard(child: ListTile(contentPadding: EdgeInsets.zero, leading: CircleAvatar(backgroundColor: _gold.withOpacity(.16), child: const Icon(Icons.person, color: _gold)), title: Text(d['name'] ?? 'مستخدم', style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Text('${d['phone'] ?? '-'}\nUID: ${docs[i].id}', style: const TextStyle(color: _muted, fontSize: 11)), trailing: _RoleBadge(role: '${d['role'] ?? 'buyer'}'))); });
     },
   );
 

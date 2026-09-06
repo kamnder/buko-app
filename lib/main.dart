@@ -155,11 +155,7 @@ class _TopBarState extends State<_TopBar> {
           Text('BUKO', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1.3)),
           Text('سيارات مستعملة بثقة وسهولة', style: TextStyle(fontSize: 12, color: muted)),
         ])),
-        IconButton(
-          tooltip: 'الإشعارات',
-          onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا توجد إشعارات جديدة'))),
-          icon: const Icon(Icons.notifications_none_rounded),
-        ),
+        IconButton(tooltip: 'الإشعارات', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا توجد إشعارات جديدة'))), icon: const Icon(Icons.notifications_none_rounded)),
       ]);
 }
 
@@ -167,14 +163,7 @@ class _SearchBox extends StatelessWidget {
   final VoidCallback onTap;
   const _SearchBox({required this.onTap});
   @override
-  Widget build(BuildContext context) => Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(18),
-          child: Container(height: 58, padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)), child: const Row(children: [Icon(Icons.search, color: gold), SizedBox(width: 12), Expanded(child: Text('ابحث عن ماركة، موديل أو مدينة', style: TextStyle(color: muted))), Icon(Icons.tune_rounded, color: Colors.white70)])),
-        ),
-      );
+  Widget build(BuildContext context) => Material(color: Colors.transparent, child: InkWell(onTap: onTap, borderRadius: BorderRadius.circular(18), child: Container(height: 58, padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)), child: const Row(children: [Icon(Icons.search, color: gold), SizedBox(width: 12), Expanded(child: Text('ابحث عن ماركة، موديل أو مدينة', style: TextStyle(color: muted))), Icon(Icons.tune_rounded, color: Colors.white70)]))));
 }
 
 class _SectionTitle extends StatelessWidget {
@@ -182,11 +171,7 @@ class _SectionTitle extends StatelessWidget {
   final VoidCallback? onTap;
   const _SectionTitle(this.title, {this.onTap});
   @override
-  Widget build(BuildContext context) => Row(children: [
-        Expanded(child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
-        if (onTap != null)
-          TextButton(onPressed: onTap, child: const Text('عرض الكل', style: TextStyle(color: gold, fontSize: 12, fontWeight: FontWeight.w700))),
-      ]);
+  Widget build(BuildContext context) => Row(children: [Expanded(child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800))), if (onTap != null) TextButton(onPressed: onTap, child: const Text('عرض الكل', style: TextStyle(color: gold, fontSize: 12, fontWeight: FontWeight.w700)))]);
 }
 
 class _Cat extends StatelessWidget {
@@ -194,14 +179,7 @@ class _Cat extends StatelessWidget {
   final String title;
   const _Cat(this.icon, this.title);
   @override
-  Widget build(BuildContext context) => Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ExplorePage(initialQuery: title))),
-          borderRadius: BorderRadius.circular(18),
-          child: Container(width: 108, margin: const EdgeInsets.only(left: 10), decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, color: gold, size: 28), const SizedBox(height: 7), Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))])),
-        ),
-      );
+  Widget build(BuildContext context) => Material(color: Colors.transparent, child: InkWell(onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ExplorePage(initialQuery: title))), borderRadius: BorderRadius.circular(18), child: Container(width: 108, margin: const EdgeInsets.only(left: 10), decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, color: gold, size: 28), const SizedBox(height: 7), Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))]))));
 }
 
 class _Info extends StatelessWidget {
@@ -222,16 +200,7 @@ class _AnimatedMarketHeroState extends State<AnimatedMarketHero> with SingleTick
   @override
   void dispose() { controller.dispose(); super.dispose(); }
   @override
-  Widget build(BuildContext context) => ClipRRect(borderRadius: BorderRadius.circular(28), child: SizedBox(height: 285, child: Stack(fit: StackFit.expand, children: [
-        AnimatedBuilder(animation: controller, builder: (_, __) => CustomPaint(painter: _ScenePainter(controller.value))),
-        const DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Color(0xD9000000)]))),
-        const Positioned(top: 18, right: 18, child: _Pill()),
-        const Positioned(right: 18, left: 18, bottom: 18, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('عربيتك الجاية\nيمكن تكون هنا', style: TextStyle(fontSize: 28, height: 1.02, fontWeight: FontWeight.w900)),
-          SizedBox(height: 6),
-          Text('ابحث • قارن • تواصل مباشرة مع المالك', style: TextStyle(color: Colors.white70, fontSize: 13)),
-        ])),
-      ])));
+  Widget build(BuildContext context) => ClipRRect(borderRadius: BorderRadius.circular(28), child: SizedBox(height: 285, child: Stack(fit: StackFit.expand, children: [AnimatedBuilder(animation: controller, builder: (_, __) => CustomPaint(painter: _ScenePainter(controller.value))), const DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Color(0xD9000000)]))), const Positioned(top: 18, right: 18, child: _Pill()), const Positioned(right: 18, left: 18, bottom: 18, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('عربيتك الجاية\nيمكن تكون هنا', style: TextStyle(fontSize: 28, height: 1.02, fontWeight: FontWeight.w900)), SizedBox(height: 6), Text('ابحث • قارن • تواصل مباشرة مع المالك', style: TextStyle(color: Colors.white70, fontSize: 13))]))])));
 }
 
 class _Pill extends StatelessWidget {
@@ -324,9 +293,7 @@ class _ExplorePageState extends State<ExplorePage> {
 
 class FavoriteStore {
   static final ValueNotifier<Map<String, Map<String, dynamic>>> items = ValueNotifier({});
-
   static bool contains(String id) => items.value.containsKey(id);
-
   static void toggle(String id, Map<String, dynamic> data) {
     final next = Map<String, Map<String, dynamic>>.from(items.value);
     if (next.containsKey(id)) {
@@ -353,33 +320,17 @@ class CarCard extends StatelessWidget {
       leading: ClipRRect(borderRadius: BorderRadius.circular(14), child: images.isEmpty ? Container(width: 76, height: 76, color: const Color(0xFF1B222C), child: const Icon(Icons.directions_car, color: gold, size: 30)) : Image.network(images.first, width: 76, height: 76, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 76, height: 76, color: const Color(0xFF1B222C), child: const Icon(Icons.directions_car, color: gold)))),
       title: Text('${data['name'] ?? 'سيارة'} • ${data['year'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w800)),
       subtitle: Padding(padding: const EdgeInsets.only(top: 5), child: Text('${data['price'] ?? ''} • ${data['city'] ?? ''}\n${data['type'] ?? ''}', style: const TextStyle(color: muted, height: 1.45))),
-      trailing: SizedBox(
-        width: 96,
-        child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-          ValueListenableBuilder<Map<String, Map<String, dynamic>>>(
-            valueListenable: FavoriteStore.items,
-            builder: (_, __, ___) => IconButton(
-              tooltip: FavoriteStore.contains(id) ? 'إزالة من المفضلة' : 'إضافة للمفضلة',
-              style: IconButton.styleFrom(backgroundColor: gold.withOpacity(.12)),
-              icon: Icon(FavoriteStore.contains(id) ? Icons.favorite : Icons.favorite_border, color: gold),
-              onPressed: () => FavoriteStore.toggle(id, data),
-            ),
-          ),
-          IconButton(
-            tooltip: isOwnCar ? 'لا يمكنك طلب شراء سيارتك' : 'طلب شراء',
-            style: IconButton.styleFrom(backgroundColor: gold.withOpacity(.12)),
-            icon: const Icon(Icons.shopping_bag_outlined, color: gold),
-            onPressed: seller == null || isOwnCar ? null : () async {
-              try {
-                await buko_service.FirebaseService.instance.createPurchaseRequest(carId: id, sellerId: seller.toString());
-                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب الشراء ✓')));
-              } catch (error) {
-                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال الطلب: $error')));
-              }
-            },
-          ),
-        ]),
-      ),
+      trailing: SizedBox(width: 96, child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+        ValueListenableBuilder<Map<String, Map<String, dynamic>>>(valueListenable: FavoriteStore.items, builder: (_, __, ___) => IconButton(tooltip: FavoriteStore.contains(id) ? 'إزالة من المفضلة' : 'إضافة للمفضلة', style: IconButton.styleFrom(backgroundColor: gold.withOpacity(.12)), icon: Icon(FavoriteStore.contains(id) ? Icons.favorite : Icons.favorite_border, color: gold), onPressed: () => FavoriteStore.toggle(id, data))),
+        IconButton(tooltip: isOwnCar ? 'لا يمكنك طلب شراء سيارتك' : 'طلب شراء', style: IconButton.styleFrom(backgroundColor: gold.withOpacity(.12)), icon: const Icon(Icons.shopping_bag_outlined, color: gold), onPressed: seller == null || isOwnCar ? null : () async {
+          try {
+            await buko_service.FirebaseService.instance.createPurchaseRequest(carId: id, sellerId: seller.toString());
+            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب الشراء ✓')));
+          } catch (error) {
+            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال الطلب: $error')));
+          }
+        }),
+      ])),
     ));
   }
 }
@@ -457,7 +408,7 @@ class FavoritesPage extends StatelessWidget {
             const Text('المفضلة', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
             const SizedBox(height: 12),
             ...items.entries.map((entry) => CarCard(data: entry.value, id: entry.key)),
-          ];
+          ]);
         },
       );
 }

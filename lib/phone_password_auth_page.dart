@@ -72,7 +72,8 @@ class _PhonePasswordAuthPageState extends State<PhonePasswordAuthPage> {
         );
       }
 
-      if (mounted) Navigator.of(context).pop(true);
+      // AuthGate listens to authStateChanges and replaces this page with HomeShell.
+      // Do not pop the root route here, otherwise a successful login can close the app.
     } on PhonePasswordAuthException catch (e) {
       setState(() => error = switch (e.code) {
             'phone-already-registered' => 'هذا الرقم مسجل بالفعل. اختر تسجيل الدخول.',

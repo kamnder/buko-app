@@ -119,4 +119,4 @@ jobs:
           echo "$RESPONSE"
           echo "$RESPONSE" | grep -q '"ok":true'
 
-# Credential refresh verification trigger
+# Credential refresh verification trigger: redeploy Worker with refreshed Firebase service-account email.

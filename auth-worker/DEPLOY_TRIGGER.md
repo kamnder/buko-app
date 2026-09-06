@@ -1,0 +1,1 @@
+Trigger auth worker redeploy with refreshed Firebase credentials.

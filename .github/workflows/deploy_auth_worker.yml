@@ -1,0 +1,46 @@
+name: Deploy BUKO Auth Worker
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'auth-worker/**'
+      - '.github/workflows/deploy_auth_worker.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Wrangler
+        run: npm install -g wrangler
+      - name: Validate required configuration
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          FIREBASE_CLIENT_EMAIL: ${{ secrets.BUKO_FIREBASE_CLIENT_EMAIL }}
+          FIREBASE_PRIVATE_KEY: ${{ secrets.BUKO_FIREBASE_PRIVATE_KEY }}
+          ADMIN_BOOTSTRAP_SECRET: ${{ secrets.BUKO_ADMIN_BOOTSTRAP_SECRET }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$FIREBASE_CLIENT_EMAIL"
+          test -n "$FIREBASE_PRIVATE_KEY"
+          test -n "$ADMIN_BOOTSTRAP_SECRET"
+      - name: Deploy Worker
+        working-directory: auth-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          FIREBASE_CLIENT_EMAIL: ${{ secrets.BUKO_FIREBASE_CLIENT_EMAIL }}
+          FIREBASE_PRIVATE_KEY: ${{ secrets.BUKO_FIREBASE_PRIVATE_KEY }}
+        run: |
+          printf '%s' "$FIREBASE_CLIENT_EMAIL" >/tmp/unused
+          npx wrangler deploy --config wrangler.toml

@@ -8,6 +8,8 @@ on:
 permissions:
   contents: write
 
+# Final integrated BUKO build: phone/password auth + Firebase backend + animated auth scene.
+
 jobs:
   build:
     runs-on: ubuntu-latest

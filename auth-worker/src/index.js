@@ -187,6 +187,25 @@ async function bootstrapAdmin(env, body) {
   return { ok: true, phone, uid, role: 'admin' };
 }
 
+async function selfTestFirebase(env, body) {
+  if (!env.ADMIN_BOOTSTRAP_SECRET || body.secret !== env.ADMIN_BOOTSTRAP_SECRET) throw new Error('forbidden');
+  if (!env.FIREBASE_API_KEY) throw new Error('firebase-api-key-missing');
+  const token = await createFirebaseCustomToken(env, 'buko_self_test', { selfTest: true });
+  const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${encodeURIComponent(env.FIREBASE_API_KEY)}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ token, returnSecureToken: true }),
+  });
+  if (response.ok) return { ok: true };
+  const text = await response.text();
+  let detail = 'firebase-token-rejected';
+  try {
+    const parsed = JSON.parse(text);
+    detail = parsed?.error?.message || detail;
+  } catch (_) {}
+  throw new Error(`firebase-self-test:${detail}`);
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') return json({ ok: true });
@@ -198,10 +217,11 @@ export default {
       if (url.pathname === '/auth/register') return json(await register(env, body));
       if (url.pathname === '/auth/login') return json(await login(env, body));
       if (url.pathname === '/auth/bootstrap-admin') return json(await bootstrapAdmin(env, body));
+      if (url.pathname === '/auth/self-test') return json(await selfTestFirebase(env, body));
       return json({ error: 'not-found' }, 404);
     } catch (error) {
       const code = error instanceof Error ? error.message : 'server-error';
-      const status = code === 'forbidden' ? 403 : code === 'phone-already-registered' || code === 'invalid-credentials' || code === 'invalid-phone' || code === 'invalid-password' || code === 'name-required' || code === 'too-many-attempts' ? 400 : 500;
+      const status = code === 'forbidden' ? 403 : code === 'phone-already-registered' || code === 'invalid-credentials' || code === 'invalid-phone' || code === 'invalid-password' || code === 'name-required' ? 400 : code === 'too-many-attempts' ? 429 : 500;
       return json({ error: code }, status);
     }
   },

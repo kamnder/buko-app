@@ -118,3 +118,5 @@ jobs:
           )")
           echo "$RESPONSE"
           echo "$RESPONSE" | grep -q '"ok":true'
+
+# Credential refresh verification trigger

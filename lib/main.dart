@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
@@ -137,7 +138,6 @@ class _TopBar extends StatefulWidget {
 class _TopBarState extends State<_TopBar> {
   int taps = 0;
   DateTime? lastTap;
-
   void hiddenAdminEntry() {
     final now = DateTime.now();
     if (lastTap == null || now.difference(lastTap!) > const Duration(seconds: 3)) taps = 0;
@@ -148,38 +148,25 @@ class _TopBarState extends State<_TopBar> {
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminLoginPage()));
     }
   }
-
   @override
-  Widget build(BuildContext context) => Row(
-        children: [
-          GestureDetector(
-            onTap: hiddenAdminEntry,
-            child: Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(color: gold, borderRadius: BorderRadius.circular(16)),
-              child: const Icon(Icons.key, color: Colors.black, size: 28),
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('BUKO', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1.3)),
-            Text('سيارات مستعملة بثقة وسهولة', style: TextStyle(fontSize: 12, color: muted)),
-          ])),
-          const Icon(Icons.notifications_none_rounded),
-        ],
-      );
+  Widget build(BuildContext context) => Row(children: [
+        GestureDetector(
+          onTap: hiddenAdminEntry,
+          child: Container(width: 50, height: 50, decoration: BoxDecoration(color: gold, borderRadius: BorderRadius.circular(16)), child: const Icon(Icons.key, color: Colors.black, size: 28)),
+        ),
+        const SizedBox(width: 12),
+        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('BUKO', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1.3)),
+          Text('سيارات مستعملة بثقة وسهولة', style: TextStyle(fontSize: 12, color: muted)),
+        ])),
+        const Icon(Icons.notifications_none_rounded),
+      ]);
 }
 
 class _SearchBox extends StatelessWidget {
   const _SearchBox();
   @override
-  Widget build(BuildContext context) => Container(
-        height: 58,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)),
-        child: const Row(children: [Icon(Icons.search, color: gold), SizedBox(width: 12), Expanded(child: Text('ابحث عن ماركة، موديل أو مدينة', style: TextStyle(color: muted))), Icon(Icons.tune_rounded, color: Colors.white70)]),
-      );
+  Widget build(BuildContext context) => Container(height: 58, padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)), child: const Row(children: [Icon(Icons.search, color: gold), SizedBox(width: 12), Expanded(child: Text('ابحث عن ماركة، موديل أو مدينة', style: TextStyle(color: muted))), Icon(Icons.tune_rounded, color: Colors.white70)]));
 }
 
 class _SectionTitle extends StatelessWidget {
@@ -194,12 +181,7 @@ class _Cat extends StatelessWidget {
   final String title;
   const _Cat(this.icon, this.title);
   @override
-  Widget build(BuildContext context) => Container(
-        width: 108,
-        margin: const EdgeInsets.only(left: 10),
-        decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)),
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, color: gold, size: 28), const SizedBox(height: 7), Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))]),
-      );
+  Widget build(BuildContext context) => Container(width: 108, margin: const EdgeInsets.only(left: 10), decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, color: gold, size: 28), const SizedBox(height: 7), Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))]));
 }
 
 class _Info extends StatelessWidget {
@@ -220,22 +202,16 @@ class _AnimatedMarketHeroState extends State<AnimatedMarketHero> with SingleTick
   @override
   void dispose() { controller.dispose(); super.dispose(); }
   @override
-  Widget build(BuildContext context) => ClipRRect(
-        borderRadius: BorderRadius.circular(28),
-        child: SizedBox(
-          height: 285,
-          child: Stack(fit: StackFit.expand, children: [
-            AnimatedBuilder(animation: controller, builder: (_, __) => CustomPaint(painter: _ScenePainter(controller.value))),
-            const DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Color(0xD9000000)]))),
-            const Positioned(top: 18, right: 18, child: _Pill()),
-            const Positioned(right: 18, left: 18, bottom: 18, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('عربيتك الجاية\nيمكن تكون هنا', style: TextStyle(fontSize: 28, height: 1.02, fontWeight: FontWeight.w900)),
-              SizedBox(height: 6),
-              Text('ابحث • قارن • تواصل مباشرة مع المالك', style: TextStyle(color: Colors.white70, fontSize: 13)),
-            ])),
-          ]),
-        ),
-      );
+  Widget build(BuildContext context) => ClipRRect(borderRadius: BorderRadius.circular(28), child: SizedBox(height: 285, child: Stack(fit: StackFit.expand, children: [
+        AnimatedBuilder(animation: controller, builder: (_, __) => CustomPaint(painter: _ScenePainter(controller.value))),
+        const DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Color(0xD9000000)]))),
+        const Positioned(top: 18, right: 18, child: _Pill()),
+        const Positioned(right: 18, left: 18, bottom: 18, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('عربيتك الجاية\nيمكن تكون هنا', style: TextStyle(fontSize: 28, height: 1.02, fontWeight: FontWeight.w900)),
+          SizedBox(height: 6),
+          Text('ابحث • قارن • تواصل مباشرة مع المالك', style: TextStyle(color: Colors.white70, fontSize: 13)),
+        ])),
+      ])));
 }
 
 class _Pill extends StatelessWidget {
@@ -329,33 +305,16 @@ class CarCard extends StatelessWidget {
     final rawImages = data['imageUrls'];
     final images = rawImages is List ? rawImages.whereType<String>().toList() : <String>[];
     final seller = data['sellerId'];
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white10)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(9),
-        leading: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: images.isEmpty
-              ? Container(width: 76, height: 76, color: const Color(0xFF1B222C), child: const Icon(Icons.directions_car, color: gold, size: 30))
-              : Image.network(images.first, width: 76, height: 76, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 76, height: 76, color: const Color(0xFF1B222C), child: const Icon(Icons.directions_car, color: gold))),
-        ),
-        title: Text('${data['name'] ?? 'سيارة'} • ${data['year'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w800)),
-        subtitle: Padding(padding: const EdgeInsets.only(top: 5), child: Text('${data['price'] ?? ''} • ${data['city'] ?? ''}\n${data['type'] ?? ''}', style: const TextStyle(color: muted, height: 1.45))),
-        trailing: IconButton(
-          style: IconButton.styleFrom(backgroundColor: gold.withOpacity(.12)),
-          icon: const Icon(Icons.shopping_bag_outlined, color: gold),
-          onPressed: seller == null ? null : () async {
-            try {
-              await buko_service.FirebaseService.instance.createPurchaseRequest(carId: id, sellerId: seller.toString());
-              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب الشراء ✓')));
-            } catch (error) {
-              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال الطلب: $error')));
-            }
-          },
-        ),
-      ),
-    );
+    return Container(margin: const EdgeInsets.only(bottom: 12), decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white10)), child: ListTile(
+      contentPadding: const EdgeInsets.all(9),
+      leading: ClipRRect(borderRadius: BorderRadius.circular(14), child: images.isEmpty ? Container(width: 76, height: 76, color: const Color(0xFF1B222C), child: const Icon(Icons.directions_car, color: gold, size: 30)) : Image.network(images.first, width: 76, height: 76, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 76, height: 76, color: const Color(0xFF1B222C), child: const Icon(Icons.directions_car, color: gold)))),
+      title: Text('${data['name'] ?? 'سيارة'} • ${data['year'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w800)),
+      subtitle: Padding(padding: const EdgeInsets.only(top: 5), child: Text('${data['price'] ?? ''} • ${data['city'] ?? ''}\n${data['type'] ?? ''}', style: const TextStyle(color: muted, height: 1.45))),
+      trailing: IconButton(style: IconButton.styleFrom(backgroundColor: gold.withOpacity(.12)), icon: const Icon(Icons.shopping_bag_outlined, color: gold), onPressed: seller == null ? null : () async {
+        try { await buko_service.FirebaseService.instance.createPurchaseRequest(carId: id, sellerId: seller.toString()); if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب الشراء ✓'))); }
+        catch (error) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال الطلب: $error'))); }
+      }),
+    ));
   }
 }
 
@@ -416,7 +375,7 @@ class _SellPageState extends State<SellPage> {
         OutlinedButton.icon(onPressed: loading ? null : pickImages, icon: const Icon(Icons.photo_library_outlined), label: Text(images.isEmpty ? 'أضف صور السيارة' : 'الصور: ${images.length}/8')),
         if (images.isNotEmpty) ...[
           const SizedBox(height: 10),
-          SizedBox(height: 90, child: ListView.separated(scrollDirection: Axis.horizontal, itemCount: images.length, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (_, index) => FutureBuilder<List<int>>(future: images[index].readAsBytes(), builder: (_, snapshot) => ClipRRect(borderRadius: BorderRadius.circular(12), child: snapshot.hasData ? Image.memory(snapshot.data!, width: 90, height: 90, fit: BoxFit.cover) : Container(width: 90, height: 90, color: const Color(0xFF1B222C), child: const Icon(Icons.image, color: gold))))))),
+          SizedBox(height: 90, child: ListView.separated(scrollDirection: Axis.horizontal, itemCount: images.length, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (_, index) => FutureBuilder<Uint8List>(future: images[index].readAsBytes(), builder: (_, snapshot) => ClipRRect(borderRadius: BorderRadius.circular(12), child: snapshot.hasData ? Image.memory(snapshot.data!, width: 90, height: 90, fit: BoxFit.cover) : Container(width: 90, height: 90, color: const Color(0xFF1B222C), child: const Icon(Icons.image, color: gold))))))),
         ],
         const SizedBox(height: 18),
         SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: loading ? null : submit, icon: const Icon(Icons.publish), label: Text(loading ? 'جارٍ النشر...' : 'إرسال للمراجعة'))),

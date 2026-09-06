@@ -44,10 +44,13 @@ class FirebaseService {
     required String city,
     required String type,
     required List<String> imageUrls,
-  }) {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) throw StateError('يجب تسجيل الدخول أولاً');
-    return _db.collection('cars').add({
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) throw StateError('يجب تسجيل الدخول أولاً');
+    final uid = user.uid.trim();
+    if (uid.isEmpty) throw StateError('جلسة المستخدم غير صالحة. أعد تسجيل الدخول.');
+
+    final payload = <String, dynamic>{
       'name': name.trim(),
       'year': year,
       'price': price.trim(),
@@ -57,7 +60,19 @@ class FirebaseService {
       'imageUrls': imageUrls.where((url) => url.trim().isNotEmpty).toList(),
       'status': 'pending',
       'createdAt': FieldValue.serverTimestamp(),
-    });
+    };
+
+    try {
+      return await _db.collection('cars').add(payload);
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        throw StateError('Firebase رفض إنشاء الإعلان (permission-denied). يجب نشر firestore.rules على مشروع BUKO.');
+      }
+      if (e.code == 'failed-precondition') {
+        throw StateError('Firebase يحتاج إعداداً إضافياً (failed-precondition). تحقق من قاعدة Firestore.');
+      }
+      throw StateError('تعذر حفظ الإعلان في Firebase (${e.code}). ${e.message ?? ''}'.trim());
+    }
   }
 
   Future<String> uploadCarImage(Uint8List bytes, String fileName) {
@@ -67,16 +82,29 @@ class FirebaseService {
   Future<void> createPurchaseRequest({
     required String carId,
     required String sellerId,
-  }) {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) throw StateError('يجب تسجيل الدخول أولاً');
-    return _db.collection('purchaseRequests').add({
-      'buyerId': uid,
-      'carId': carId,
-      'sellerId': sellerId,
-      'status': 'pending',
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) throw StateError('يجب تسجيل الدخول أولاً');
+    final uid = user.uid.trim();
+    if (uid.isEmpty) throw StateError('جلسة المستخدم غير صالحة. أعد تسجيل الدخول.');
+    if (sellerId.trim().isEmpty) throw StateError('بيانات البائع غير صالحة.');
+    if (carId.trim().isEmpty) throw StateError('بيانات السيارة غير صالحة.');
+    if (sellerId.trim() == uid) throw StateError('لا يمكنك طلب شراء سيارتك.');
+
+    try {
+      await _db.collection('purchaseRequests').add({
+        'buyerId': uid,
+        'carId': carId.trim(),
+        'sellerId': sellerId.trim(),
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        throw StateError('Firebase رفض إرسال الطلب (permission-denied). تحقق من firestore.rules.');
+      }
+      throw StateError('تعذر إرسال الطلب إلى Firebase (${e.code}). ${e.message ?? ''}'.trim());
+    }
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> watchMyRequests() {

@@ -12,3 +12,5 @@ migrations_dir = "migrations"
 [vars]
 FIREBASE_PROJECT_ID = "buko-6f769"
 FIREBASE_API_KEY = "REPLACE_WITH_FIREBASE_WEB_API_KEY"
+
+# Deployment trigger marker

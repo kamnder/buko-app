@@ -5,6 +5,7 @@ import 'widgets/animated_background.dart';
 const _gold = Color(0xFFFFB51B);
 const _ink = Color(0xFF080B10);
 const _panel = Color(0xFF11161E);
+const _panel2 = Color(0xFF17212B);
 const _muted = Color(0xFF9BA6B5);
 
 class AdminPage extends StatefulWidget {
@@ -17,31 +18,35 @@ class _AdminPageState extends State<AdminPage> {
   final _db = FirebaseFirestore.instance;
   int _tab = 0;
   bool _loading = false;
+  String _search = '';
 
   Future<void> _update(String collection, String id, String status) async {
+    if (_loading) return;
     setState(() => _loading = true);
     try {
       await _db.collection(collection).doc(id).update({
         'status': status,
         'reviewedAt': FieldValue.serverTimestamp(),
       });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(status == 'approved' ? 'تمت الموافقة ✓' : 'تم الرفض')),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(status == 'approved' ? 'تمت الموافقة على العنصر ✓' : 'تم الرفض')),
+      );
     } on FirebaseException catch (e) {
       if (!mounted) return;
       final message = e.code == 'permission-denied'
-          ? 'ليس لديك صلاحية المراجعة. تحقق من صلاحية admin في Firebase Rules.'
-          : 'تعذر تنفيذ المراجعة (${e.code}): ${e.message ?? 'خطأ غير معروف'}';
+          ? 'ليس لديك صلاحية لهذا الإجراء. تأكد من صلاحية admin.'
+          : 'تعذر تنفيذ العملية (${e.code}).';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تنفيذ المراجعة: $e')));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
+
+  void _setTab(int tab) => setState(() {
+        _tab = tab;
+        _search = '';
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -49,101 +54,406 @@ class _AdminPageState extends State<AdminPage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: _ink,
-        appBar: AppBar(
-          backgroundColor: _ink,
-          title: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('لوحة تحكم BUKO', style: TextStyle(fontWeight: FontWeight.w900)),
-              Text('مراقبة المنصة وإدارة العمليات', style: TextStyle(fontSize: 11, color: _muted)),
-            ],
+        body: SafeArea(
+          child: BukoAnimatedBackground(
+            child: Column(
+              children: [
+                _header(),
+                Expanded(child: _body()),
+              ],
+            ),
           ),
         ),
-        body: BukoAnimatedBackground(
-          child: Column(
-            children: [
-              _summary(),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: SegmentedButton<int>(
-                  segments: const [
-                    ButtonSegment(value: 0, icon: Icon(Icons.directions_car_outlined), label: Text('السيارات')),
-                    ButtonSegment(value: 1, icon: Icon(Icons.people_outline), label: Text('المستخدمون')),
-                    ButtonSegment(value: 2, icon: Icon(Icons.shopping_bag_outlined), label: Text('الطلبات')),
-                  ],
-                  selected: {_tab},
-                  onSelectionChanged: (v) => setState(() => _tab = v.first),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Expanded(child: IndexedStack(index: _tab, children: [_cars(), _users(), _requests()])),
-            ],
-          ),
-        ),
+        bottomNavigationBar: _navigation(),
       ),
     );
   }
 
-  Widget _summary() => SizedBox(height: 92, child: Row(children: [
-    Expanded(child: _CountCard(title: 'المستخدمون', icon: Icons.people_outline, stream: _db.collection('users').snapshots())),
-    Expanded(child: _CountCard(title: 'طلبات معلقة', icon: Icons.shopping_bag_outlined, stream: _db.collection('purchaseRequests').where('status', isEqualTo: 'pending').snapshots())),
-    Expanded(child: _CountCard(title: 'إعلانات معلقة', icon: Icons.directions_car_outlined, stream: _db.collection('cars').where('status', isEqualTo: 'pending').snapshots())),
-  ]));
-
-  Widget _cars() {
-    final stream = _db.collection('cars').where('status', isEqualTo: 'pending').orderBy('createdAt', descending: true).snapshots();
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(stream: stream, builder: (_, snapshot) {
-      if (snapshot.hasError) return const _Error('تعذر تحميل الإعلانات.');
-      if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-      final docs = snapshot.data!.docs;
-      if (docs.isEmpty) return const _Empty(icon: Icons.check_circle_outline, text: 'لا توجد إعلانات بانتظار المراجعة');
-      return ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24), itemCount: docs.length,
-        itemBuilder: (_, i) {
-          final doc = docs[i]; final data = doc.data(); final images = List<String>.from(data['imageUrls'] ?? const <String>[]);
-          return _Card(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            if (images.isNotEmpty) ClipRRect(borderRadius: BorderRadius.circular(16), child: Image.network(images.first, height: 175, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox(height: 175, child: Icon(Icons.directions_car, size: 60, color: _gold)))) else const SizedBox(height: 110, child: Center(child: Icon(Icons.directions_car, size: 58, color: _gold))),
-            const SizedBox(height: 10), Text('${data['name'] ?? 'سيارة'} • ${data['year'] ?? ''}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-            Text('السعر: ${data['price'] ?? '-'}  •  المدينة: ${data['city'] ?? '-'}\nالبائع: ${data['sellerId'] ?? '-'}', style: const TextStyle(color: _muted, height: 1.5)),
-            const SizedBox(height: 12), Row(children: [
-              Expanded(child: FilledButton.icon(onPressed: _loading ? null : () => _update('cars', doc.id, 'approved'), icon: const Icon(Icons.check), label: const Text('قبول'))),
-              const SizedBox(width: 8), Expanded(child: OutlinedButton.icon(onPressed: _loading ? null : () => _update('cars', doc.id, 'rejected'), icon: const Icon(Icons.close), label: const Text('رفض'))),
-            ]),
-          ]));
-        },
+  Widget _header() => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: _gold,
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [BoxShadow(color: _gold.withOpacity(.22), blurRadius: 18)],
+              ),
+              child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.black, size: 27),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('BUKO', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+                  Text('لوحة تحكم الإدارة', style: TextStyle(color: _muted, fontSize: 12)),
+                ],
+              ),
+            ),
+            IconButton(
+              tooltip: 'تحديث',
+              onPressed: () => setState(() {}),
+              icon: const Icon(Icons.refresh_rounded),
+            ),
+          ],
+        ),
       );
-    });
+
+  Widget _body() {
+    switch (_tab) {
+      case 1:
+        return _adsPage();
+      case 2:
+        return _usersPage();
+      case 3:
+        return _requestsPage();
+      case 4:
+        return _settingsPage();
+      default:
+        return _dashboardPage();
+    }
   }
 
-  Widget _users() => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(stream: _db.collection('users').snapshots(), builder: (_, snapshot) {
-    if (snapshot.hasError) return const _Error('تعذر تحميل المستخدمين.');
-    if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-    final docs = [...snapshot.data!.docs]..sort((a, b) { final aa = a.data()['createdAt']; final bb = b.data()['createdAt']; return aa is Timestamp && bb is Timestamp ? bb.compareTo(aa) : 0; });
-    if (docs.isEmpty) return const _Empty(icon: Icons.people_outline, text: 'لا يوجد مستخدمون بعد');
-    return ListView.separated(padding: const EdgeInsets.fromLTRB(16, 8, 16, 24), itemCount: docs.length, separatorBuilder: (_, __) => const SizedBox(height: 8), itemBuilder: (_, i) {
-      final data = docs[i].data(); return _Card(child: ListTile(contentPadding: EdgeInsets.zero, leading: CircleAvatar(backgroundColor: _gold.withOpacity(.15), child: const Icon(Icons.person, color: _gold)), title: Text('${data['name'] ?? 'مستخدم'}', style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Text('${data['phone'] ?? '-'}\nUID: ${docs[i].id}', style: const TextStyle(color: _muted, fontSize: 11)), trailing: _Role(role: '${data['role'] ?? 'buyer'}')));
-    });
-  });
+  Widget _dashboardPage() => ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+        children: [
+          const Text('مرحباً بك، مدير النظام 👑', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 4),
+          const Text('راقب الإعلانات والمستخدمين وطلبات الشراء من مكان واحد.', style: TextStyle(color: _muted)),
+          const SizedBox(height: 18),
+          _metricsGrid(),
+          const SizedBox(height: 18),
+          _sectionTitle('إجراءات سريعة'),
+          const SizedBox(height: 10),
+          _quickAction(Icons.directions_car_outlined, 'مراجعة الإعلانات', 'اعتماد أو رفض الإعلانات الجديدة', 1),
+          _quickAction(Icons.people_outline, 'إدارة المستخدمين', 'عرض الحسابات والأدوار', 2),
+          _quickAction(Icons.shopping_cart_outlined, 'طلبات الشراء', 'متابعة الطلبات وحالتها', 3),
+          _quickAction(Icons.settings_outlined, 'إعدادات التطبيق', 'معلومات الإدارة والنظام', 4),
+          const SizedBox(height: 18),
+          _activityCard(),
+        ],
+      );
 
-  Widget _requests() => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(stream: _db.collection('purchaseRequests').orderBy('createdAt', descending: true).snapshots(), builder: (_, snapshot) {
-    if (snapshot.hasError) return const _Error('تعذر تحميل طلبات الشراء.');
-    if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-    final docs = snapshot.data!.docs;
-    if (docs.isEmpty) return const _Empty(icon: Icons.shopping_bag_outlined, text: 'لا توجد طلبات شراء');
-    return ListView.separated(padding: const EdgeInsets.fromLTRB(16, 8, 16, 24), itemCount: docs.length, separatorBuilder: (_, __) => const SizedBox(height: 8), itemBuilder: (_, i) {
-      final doc = docs[i]; final data = doc.data(); final status = '${data['status'] ?? 'pending'}'; final short = doc.id.substring(0, doc.id.length > 7 ? 7 : doc.id.length);
-      return _Card(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Row(children: [const Icon(Icons.shopping_cart_outlined, color: _gold), const SizedBox(width: 8), Expanded(child: Text('طلب شراء #$short', style: const TextStyle(fontWeight: FontWeight.w900))), _Status(status: status)]), const SizedBox(height: 10), Text('المشتري: ${data['buyerId'] ?? '-'}\nالبائع: ${data['sellerId'] ?? '-'}\nالسيارة: ${data['carId'] ?? '-'}', style: const TextStyle(color: _muted, height: 1.5, fontSize: 12)), if (status == 'pending') ...[const SizedBox(height: 10), Row(children: [Expanded(child: FilledButton.icon(onPressed: _loading ? null : () => _update('purchaseRequests', doc.id, 'approved'), icon: const Icon(Icons.check), label: const Text('موافقة'))), const SizedBox(width: 8), Expanded(child: OutlinedButton.icon(onPressed: _loading ? null : () => _update('purchaseRequests', doc.id, 'rejected'), icon: const Icon(Icons.close), label: const Text('رفض')))])]]));
-    });
-  });
+  Widget _metricsGrid() => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: _db.collection('cars').snapshots(),
+        builder: (_, cars) => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: _db.collection('users').snapshots(),
+          builder: (_, users) => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: _db.collection('purchaseRequests').snapshots(),
+            builder: (_, requests) {
+              final carDocs = cars.data?.docs ?? const [];
+              final userDocs = users.data?.docs ?? const [];
+              final requestDocs = requests.data?.docs ?? const [];
+              final pendingCars = carDocs.where((d) => d.data()['status'] == 'pending').length;
+              final pendingRequests = requestDocs.where((d) => d.data()['status'] == 'pending').length;
+              return GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: 1.35,
+                children: [
+                  _metric(Icons.directions_car_outlined, 'إجمالي الإعلانات', '${carDocs.length}'),
+                  _metric(Icons.people_outline, 'المستخدمون', '${userDocs.length}'),
+                  _metric(Icons.schedule_rounded, 'بانتظار المراجعة', '$pendingCars'),
+                  _metric(Icons.shopping_cart_outlined, 'طلبات الشراء', '${requestDocs.length}  •  $pendingRequests معلقة'),
+                ],
+              );
+            },
+          ),
+        ),
+      );
+
+  Widget _metric(IconData icon, String title, String value) => Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _panel.withOpacity(.96),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(icon, color: _gold, size: 24),
+          const Spacer(),
+          Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 2),
+          Text(title, style: const TextStyle(color: _muted, fontSize: 11)),
+        ]),
+      );
+
+  Widget _quickAction(IconData icon, String title, String subtitle, int tab) => Padding(
+        padding: const EdgeInsets.only(bottom: 9),
+        child: Material(
+          color: _panel.withOpacity(.96),
+          borderRadius: BorderRadius.circular(18),
+          child: InkWell(
+            onTap: () => _setTab(tab),
+            borderRadius: BorderRadius.circular(18),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(children: [
+                Container(width: 43, height: 43, decoration: BoxDecoration(color: _gold.withOpacity(.12), borderRadius: BorderRadius.circular(14)), child: Icon(icon, color: _gold)),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontWeight: FontWeight.w800)), const SizedBox(height: 2), Text(subtitle, style: const TextStyle(color: _muted, fontSize: 11))])),
+                const Icon(Icons.chevron_left_rounded, color: _muted),
+              ]),
+            ),
+          ),
+        ),
+      );
+
+  Widget _activityCard() => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: _db.collection('cars').orderBy('createdAt', descending: true).limit(5).snapshots(),
+        builder: (_, snapshot) {
+          final docs = snapshot.data?.docs ?? const [];
+          return _box(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              _sectionTitle('آخر الإعلانات'),
+              const SizedBox(height: 10),
+              if (docs.isEmpty) const Text('لا توجد إعلانات حتى الآن.', style: TextStyle(color: _muted)),
+              ...docs.map((doc) {
+                final d = doc.data();
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: _thumb(d['imageUrls']),
+                  title: Text('${d['name'] ?? 'سيارة'} • ${d['year'] ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
+                  subtitle: Text('${d['city'] ?? '-'} • ${d['status'] ?? 'pending'}', style: const TextStyle(color: _muted, fontSize: 11)),
+                  trailing: const Icon(Icons.chevron_left_rounded, color: _muted),
+                  onTap: () => _setTab(1),
+                );
+              }),
+            ]),
+          );
+        },
+      );
+
+  Widget _adsPage() => Column(children: [
+        _pageTitle('مراجعة الإعلانات', 'الإعلانات التي تحتاج قرار الإدارة.'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: _searchField('ابحث عن سيارة أو مدينة'),
+        ),
+        Expanded(child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: _db.collection('cars').where('status', isEqualTo: 'pending').orderBy('createdAt', descending: true).snapshots(),
+          builder: (_, snapshot) {
+            if (snapshot.hasError) return const _Error('تعذر تحميل الإعلانات.');
+            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+            final docs = snapshot.data!.docs.where((doc) => _matches(doc.data())).toList();
+            if (docs.isEmpty) return const _Empty(icon: Icons.check_circle_outline, text: 'لا توجد إعلانات بانتظار المراجعة');
+            return ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+              itemCount: docs.length,
+              itemBuilder: (_, i) => _adCard(docs[i]),
+            );
+          },
+        )),
+      ]);
+
+  Widget _adCard(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+    final d = doc.data();
+    final images = List<String>.from(d['imageUrls'] ?? const <String>[]);
+    return _box(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (images.isNotEmpty)
+          ClipRRect(borderRadius: BorderRadius.circular(15), child: Image.network(images.first, height: 175, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _imageFallback()))
+        else
+          _imageFallback(),
+        const SizedBox(height: 12),
+        Row(children: [Expanded(child: Text('${d['name'] ?? 'سيارة'} • ${d['year'] ?? ''}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900))), _status('pending')]),
+        const SizedBox(height: 5),
+        Text('${d['price'] ?? '-'} • ${d['city'] ?? '-'}', style: const TextStyle(color: _gold, fontWeight: FontWeight.w800)),
+        Text('البائع: ${d['sellerId'] ?? '-'}', style: const TextStyle(color: _muted, fontSize: 11)),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(child: FilledButton.icon(onPressed: _loading ? null : () => _showDecision(doc, true), icon: const Icon(Icons.check_rounded), label: const Text('موافقة'))),
+          const SizedBox(width: 8),
+          Expanded(child: OutlinedButton.icon(onPressed: _loading ? null : () => _showDecision(doc, false), icon: const Icon(Icons.close_rounded), label: const Text('رفض'))),
+        ]),
+      ]),
+    );
+  }
+
+  Future<void> _showDecision(QueryDocumentSnapshot<Map<String, dynamic>> doc, bool approve) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(approve ? 'تأكيد الموافقة' : 'تأكيد الرفض'),
+        content: Text(approve ? 'سيظهر الإعلان للمستخدمين بعد الموافقة.' : 'سيتم رفض هذا الإعلان ولن يظهر ضمن الإعلانات المنشورة.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(approve ? 'موافقة' : 'رفض')),
+        ],
+      ),
+    );
+    if (ok == true) await _update('cars', doc.id, approve ? 'approved' : 'rejected');
+  }
+
+  Widget _usersPage() => Column(children: [
+        _pageTitle('إدارة المستخدمين', 'عرض الحسابات وأدوارها.'),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: _searchField('ابحث بالاسم أو الهاتف')),
+        Expanded(child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: _db.collection('users').snapshots(),
+          builder: (_, snapshot) {
+            if (snapshot.hasError) return const _Error('تعذر تحميل المستخدمين.');
+            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+            final docs = snapshot.data!.docs.where((d) => _matches(d.data())).toList();
+            if (docs.isEmpty) return const _Empty(icon: Icons.people_outline, text: 'لا يوجد مستخدمون مطابقون');
+            return ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+              itemCount: docs.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (_, i) {
+                final d = docs[i].data();
+                final role = '${d['role'] ?? 'buyer'}';
+                return _box(child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(backgroundColor: _gold.withOpacity(.13), child: const Icon(Icons.person_rounded, color: _gold)),
+                  title: Text('${d['name'] ?? 'مستخدم'}', style: const TextStyle(fontWeight: FontWeight.w800)),
+                  subtitle: Text('${d['phone'] ?? '-'}\nUID: ${docs[i].id}', style: const TextStyle(color: _muted, fontSize: 11)),
+                  trailing: _role(role),
+                  onTap: () => _showUser(docs[i]),
+                ));
+              },
+            );
+          },
+        )),
+      ]);
+
+  Future<void> _showUser(QueryDocumentSnapshot<Map<String, dynamic>> doc) async {
+    final d = doc.data();
+    await showDialog<void>(context: context, builder: (_) => AlertDialog(
+      title: Text('${d['name'] ?? 'مستخدم'}'),
+      content: Text('الهاتف: ${d['phone'] ?? '-'}\nالدور: ${d['role'] ?? 'buyer'}\nUID: ${doc.id}'),
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق'))],
+    ));
+  }
+
+  Widget _requestsPage() => Column(children: [
+        _pageTitle('طلبات الشراء', 'تابع الطلبات وحالاتها.'),
+        Expanded(child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: _db.collection('purchaseRequests').orderBy('createdAt', descending: true).snapshots(),
+          builder: (_, snapshot) {
+            if (snapshot.hasError) return const _Error('تعذر تحميل طلبات الشراء.');
+            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+            final docs = snapshot.data!.docs;
+            if (docs.isEmpty) return const _Empty(icon: Icons.shopping_bag_outlined, text: 'لا توجد طلبات شراء');
+            return ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              itemCount: docs.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 9),
+              itemBuilder: (_, i) => _requestCard(docs[i]),
+            );
+          },
+        )),
+      ]);
+
+  Widget _requestCard(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+    final d = doc.data();
+    final status = '${d['status'] ?? 'pending'}';
+    return _box(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [const Icon(Icons.shopping_cart_outlined, color: _gold), const SizedBox(width: 8), Expanded(child: Text('طلب شراء #${doc.id.substring(0, doc.id.length > 8 ? 8 : doc.id.length)}', style: const TextStyle(fontWeight: FontWeight.w900))), _status(status)]),
+      const SizedBox(height: 10),
+      Text('المشتري: ${d['buyerId'] ?? '-'}\nالبائع: ${d['sellerId'] ?? '-'}\nالسيارة: ${d['carId'] ?? '-'}', style: const TextStyle(color: _muted, fontSize: 11, height: 1.55)),
+      if (status == 'pending') ...[
+        const SizedBox(height: 11),
+        Row(children: [
+          Expanded(child: FilledButton.icon(onPressed: _loading ? null : () => _update('purchaseRequests', doc.id, 'approved'), icon: const Icon(Icons.check), label: const Text('موافقة'))),
+          const SizedBox(width: 8),
+          Expanded(child: OutlinedButton.icon(onPressed: _loading ? null : () => _update('purchaseRequests', doc.id, 'rejected'), icon: const Icon(Icons.close), label: const Text('رفض'))),
+        ]),
+      ],
+    ]));
+  }
+
+  Widget _settingsPage() => ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
+          _pageTitle('إعدادات الإدارة', 'معلومات النظام وأدوات الإدارة.'),
+          _box(child: Column(children: [
+            const ListTile(leading: Icon(Icons.security_outlined, color: _gold), title: Text('صلاحية الأدمن'), subtitle: Text('الوصول محمي عبر Firebase Custom Claims: admin=true', style: TextStyle(color: _muted, fontSize: 11))),
+            const Divider(color: Colors.white10),
+            ListTile(leading: const Icon(Icons.cloud_done_outlined, color: _gold), title: const Text('قاعدة البيانات'), subtitle: const Text('Firebase Firestore', style: TextStyle(color: _muted, fontSize: 11)), onTap: () => _info('قاعدة البيانات', 'تُستخدم Firestore للإعلانات والمستخدمين وطلبات الشراء.')),
+            const Divider(color: Colors.white10),
+            ListTile(leading: const Icon(Icons.info_outline, color: _gold), title: const Text('عن لوحة BUKO'), subtitle: const Text('نسخة الإدارة', style: TextStyle(color: _muted, fontSize: 11)), onTap: () => _info('لوحة تحكم BUKO', 'إدارة الإعلانات والمستخدمين وطلبات الشراء في مكان واحد.')),
+          ])),
+        ],
+      );
+
+  Future<void> _info(String title, String message) async {
+    await showDialog<void>(context: context, builder: (_) => AlertDialog(title: Text(title), content: Text(message), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('حسناً'))]));
+  }
+
+  Widget _navigation() => NavigationBar(
+        backgroundColor: const Color(0xFF0C1016),
+        indicatorColor: _gold.withOpacity(.15),
+        selectedIndex: _tab,
+        onDestinationSelected: _setTab,
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home, color: _gold), label: 'الرئيسية'),
+          NavigationDestination(icon: Icon(Icons.directions_car_outlined), selectedIcon: Icon(Icons.directions_car, color: _gold), label: 'الإعلانات'),
+          NavigationDestination(icon: Icon(Icons.people_outline), selectedIcon: Icon(Icons.people, color: _gold), label: 'المستخدمون'),
+          NavigationDestination(icon: Icon(Icons.shopping_cart_outlined), selectedIcon: Icon(Icons.shopping_cart, color: _gold), label: 'الطلبات'),
+          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings, color: _gold), label: 'الإعدادات'),
+        ],
+      );
+
+  Widget _pageTitle(String title, String subtitle) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
+        child: Row(children: [Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w900)), Text(subtitle, style: const TextStyle(color: _muted, fontSize: 11))]))]),
+      );
+
+  Widget _sectionTitle(String text) => Text(text, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900));
+
+  Widget _searchField(String hint) => TextField(
+        onChanged: (v) => setState(() => _search = v.trim().toLowerCase()),
+        decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: hint, suffixIcon: _search.isEmpty ? null : IconButton(onPressed: () => setState(() => _search = ''), icon: const Icon(Icons.clear))),
+      );
+
+  bool _matches(Map<String, dynamic> d) {
+    if (_search.isEmpty) return true;
+    final text = [d['name'], d['city'], d['phone'], d['sellerId'], d['buyerId'], d['carId']].whereType<Object>().join(' ').toLowerCase();
+    return text.contains(_search);
+  }
+
+  Widget _box({required Widget child, EdgeInsetsGeometry? margin}) => Card(
+        color: _panel.withOpacity(.96),
+        margin: margin ?? const EdgeInsets.only(bottom: 5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(21), side: const BorderSide(color: Colors.white10)),
+        child: Padding(padding: const EdgeInsets.all(13), child: child),
+      );
+
+  Widget _thumb(dynamic value) {
+    final list = value is List ? value : const [];
+    final url = list.isNotEmpty ? '${list.first}' : '';
+    return Container(width: 52, height: 52, decoration: BoxDecoration(color: _panel2, borderRadius: BorderRadius.circular(13)), child: url.isEmpty ? const Icon(Icons.directions_car, color: _gold) : ClipRRect(borderRadius: BorderRadius.circular(13), child: Image.network(url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.directions_car, color: _gold))));
+  }
+
+  Widget _imageFallback() => Container(height: 175, color: _panel2, child: const Center(child: Icon(Icons.directions_car_rounded, color: _gold, size: 62)));
+
+  Widget _role(String role) => Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6), decoration: BoxDecoration(color: _gold.withOpacity(.12), borderRadius: BorderRadius.circular(18)), child: Text(role == 'admin' ? 'أدمن' : 'مستخدم', style: const TextStyle(color: _gold, fontSize: 10, fontWeight: FontWeight.w800)));
+
+  Widget _status(String status) {
+    final color = status == 'approved' ? Colors.greenAccent : status == 'rejected' ? Colors.redAccent : _gold;
+    final text = status == 'approved' ? 'مقبول' : status == 'rejected' ? 'مرفوض' : 'قيد الانتظار';
+    return Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6), decoration: BoxDecoration(color: color.withOpacity(.12), borderRadius: BorderRadius.circular(18)), child: Text(text, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w800)));
+  }
 }
 
-class _CountCard extends StatelessWidget {
-  final String title; final IconData icon; final Stream<QuerySnapshot<Map<String, dynamic>>> stream;
-  const _CountCard({required this.title, required this.icon, required this.stream});
-  @override Widget build(BuildContext context) => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(stream: stream, builder: (_, snapshot) => Container(margin: const EdgeInsets.all(5), padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: _panel.withOpacity(.94), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white10)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, color: _gold, size: 19), const Spacer(), Text('${snapshot.data?.size ?? 0}', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900)), Text(title, style: const TextStyle(color: _muted, fontSize: 10))])));
+class _Empty extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _Empty({required this.icon, required this.text});
+  @override
+  Widget build(BuildContext context) => Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, color: _gold, size: 52), const SizedBox(height: 10), Text(text, style: const TextStyle(color: _muted))]));
 }
-class _Card extends StatelessWidget { final Widget child; const _Card({required this.child}); @override Widget build(BuildContext context) => Card(color: _panel.withOpacity(.96), margin: const EdgeInsets.only(bottom: 5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(21), side: const BorderSide(color: Colors.white10)), child: Padding(padding: const EdgeInsets.all(13), child: child)); }
-class _Role extends StatelessWidget { final String role; const _Role({required this.role}); @override Widget build(BuildContext context) => Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6), decoration: BoxDecoration(color: _gold.withOpacity(.12), borderRadius: BorderRadius.circular(18)), child: Text(role == 'admin' ? 'أدمن' : 'مستخدم', style: const TextStyle(color: _gold, fontSize: 10, fontWeight: FontWeight.w800))); }
-class _Status extends StatelessWidget { final String status; const _Status({required this.status}); @override Widget build(BuildContext context) { final color = status == 'approved' ? Colors.greenAccent : status == 'rejected' ? Colors.redAccent : _gold; return Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6), decoration: BoxDecoration(color: color.withOpacity(.12), borderRadius: BorderRadius.circular(18)), child: Text(status == 'approved' ? 'مقبول' : status == 'rejected' ? 'مرفوض' : 'قيد الانتظار', style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w800))); } }
-class _Empty extends StatelessWidget { final IconData icon; final String text; const _Empty({required this.icon, required this.text}); @override Widget build(BuildContext context) => Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, color: _gold, size: 50), const SizedBox(height: 10), Text(text, style: const TextStyle(color: _muted))])); }
-class _Error extends StatelessWidget { final String text; const _Error(this.text); @override Widget build(BuildContext context) => Center(child: Text(text, style: const TextStyle(color: Colors.redAccent))); }
+
+class _Error extends StatelessWidget {
+  final String text;
+  const _Error(this.text);
+  @override
+  Widget build(BuildContext context) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(text, textAlign: TextAlign.center, style: const TextStyle(color: Colors.redAccent))));
+}

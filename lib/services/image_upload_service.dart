@@ -17,13 +17,14 @@ class ImageUploadService {
     'BUKO_CLOUDINARY_CLOUD_NAME',
     defaultValue: 'REPLACE_WITH_CLOUD_NAME',
   );
-  static const String _uploadPreset = String.fromEnvironment(
-    'BUKO_CLOUDINARY_UPLOAD_PRESET',
-    defaultValue: 'REPLACE_WITH_UNSIGNED_UPLOAD_PRESET',
-  );
+
+  // This is the verified unsigned preset for the BUKO Cloudinary account.
+  // Keep it fixed in the app so a stale/misconfigured build secret cannot
+  // silently replace the preset used by production APKs.
+  static const String _uploadPreset = 'buko_cars';
 
   Future<String> uploadCarImage(Uint8List bytes, String fileName) async {
-    if (_cloudName.startsWith('REPLACE_') || _uploadPreset.startsWith('REPLACE_')) {
+    if (_cloudName.startsWith('REPLACE_')) {
       throw StateError('خدمة الصور غير مهيأة بعد. إعدادات Cloudinary ناقصة.');
     }
     if (bytes.isEmpty) throw StateError('ملف الصورة فارغ.');
@@ -57,7 +58,7 @@ class ImageUploadService {
         if (normalized.contains('upload preset') &&
             (normalized.contains('not found') || normalized.contains('does not exist'))) {
           throw StateError(
-            'Cloudinary لا يجد Upload Preset "$_uploadPreset". تحقق من اسم الـPreset في إعدادات البناء.',
+            'Cloudinary لا يجد Upload Preset "$_uploadPreset". تحقق من إعدادات Cloudinary.',
           );
         }
 

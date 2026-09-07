@@ -1,6 +1,9 @@
 import 'dart:math' as math;
 
+import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/material.dart';
+
+import 'admin_page.dart';
 import 'services/phone_password_auth_service.dart';
 import 'services/firebase_service.dart' as buko_service;
 
@@ -70,10 +73,22 @@ class _PhonePasswordAuthPageState extends State<PhonePasswordAuthPage> {
           phone: p,
           role: 'buyer',
         );
+      } else {
+        // Admin accounts are authenticated by the Worker with the Firebase
+        // custom claim `admin=true`. Route them directly to the dashboard.
+        final user = auth.FirebaseAuth.instance.currentUser;
+        final token = await user?.getIdTokenResult(true);
+        if (token?.claims?['admin'] == true) {
+          if (!mounted) return;
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const AdminPage()),
+            (route) => false,
+          );
+          return;
+        }
       }
 
-      // AuthGate listens to authStateChanges and replaces this page with HomeShell.
-      // Do not pop the root route here, otherwise a successful login can close the app.
+      // Normal users are handled by AuthGate through authStateChanges.
     } on PhonePasswordAuthException catch (e) {
       setState(() => error = switch (e.code) {
             'phone-already-registered' => 'هذا الرقم مسجل بالفعل. اختر تسجيل الدخول.',

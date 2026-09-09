@@ -1,0 +1,50 @@
+name: Apply modern car cards
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/widgets/modern_car_card.dart'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Wire modern card into app
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('lib/main.dart')
+          s = p.read_text()
+          import_line = "import 'widgets/modern_car_card.dart';\n"
+          if import_line not in s:
+              anchor = "import 'services/firebase_service.dart' as buko_service;\n"
+              if anchor not in s:
+                  raise SystemExit('main.dart import anchor not found')
+              s = s.replace(anchor, anchor + import_line, 1)
+          old = 'CarCard(data:'
+          new = 'ModernCarCard(data:'
+          count = s.count(old)
+          if count == 0:
+              raise SystemExit('No CarCard call sites found')
+          s = s.replace(old, new)
+          p.write_text(s)
+          print(f'Replaced {count} car-card call site(s).')
+          PY
+
+      - name: Commit wiring
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add lib/main.dart
+          git diff --cached --quiet && exit 0
+          git commit -m 'Modernize car listing cards and rename purchase action'
+          git push

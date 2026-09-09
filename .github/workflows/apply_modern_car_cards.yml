@@ -24,11 +24,13 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
+          import re
           p = Path('lib/main.dart')
           s = p.read_text()
           s = s.replace('ModernModernModernCarCard(', 'ModernCarCard(')
           s = s.replace('ModernModernCarCard(', 'ModernCarCard(')
           s = s.replace('CarCard(data:', 'ModernCarCard(data:')
+          s = re.sub(r'class CarCard extends StatelessWidget \{.*?\n\}\n\nclass SellPage extends StatefulWidget \{', 'class SellPage extends StatefulWidget {', s, flags=re.S)
           p.write_text(s)
           PY
 
@@ -39,5 +41,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add lib/main.dart
           git diff --cached --quiet && exit 0
-          git commit -m 'Fix modern car card reference'
+          git commit -m 'Remove duplicate legacy car card class'
           git push

@@ -317,36 +317,6 @@ class FavoriteStore {
   }
 }
 
-class CarCard extends StatelessWidget {
-  final Map<String, dynamic> data;
-  final String id;
-  const ModernCarCard({super.key, required this.data, required this.id});
-  @override
-  Widget build(BuildContext context) {
-    final rawImages = data['imageUrls'];
-    final images = rawImages is List ? rawImages.whereType<String>().toList() : <String>[];
-    final seller = data['sellerId'];
-    final isOwnCar = seller != null && seller.toString() == buko_service.FirebaseService.instance.currentUser?.uid;
-    return Container(margin: const EdgeInsets.only(bottom: 12), decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white10)), child: ListTile(
-      contentPadding: const EdgeInsets.all(9),
-      leading: ClipRRect(borderRadius: BorderRadius.circular(14), child: images.isEmpty ? Container(width: 76, height: 76, color: const Color(0xFF1B222C), child: const Icon(Icons.directions_car, color: gold, size: 30)) : Image.network(images.first, width: 76, height: 76, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 76, height: 76, color: const Color(0xFF1B222C), child: const Icon(Icons.directions_car, color: gold)))),
-      title: Text('${data['name'] ?? 'سيارة'} • ${data['year'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w800)),
-      subtitle: Padding(padding: const EdgeInsets.only(top: 5), child: Text('${data['price'] ?? ''} • ${data['city'] ?? ''}\n${data['type'] ?? ''}', style: const TextStyle(color: muted, height: 1.45))),
-      trailing: SizedBox(width: 96, child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-        ValueListenableBuilder<Map<String, Map<String, dynamic>>>(valueListenable: FavoriteStore.items, builder: (_, __, ___) => IconButton(tooltip: FavoriteStore.contains(id) ? 'إزالة من المفضلة' : 'إضافة للمفضلة', style: IconButton.styleFrom(backgroundColor: gold.withOpacity(.12)), icon: Icon(FavoriteStore.contains(id) ? Icons.favorite : Icons.favorite_border, color: gold), onPressed: () => FavoriteStore.toggle(id, data))),
-        IconButton(tooltip: isOwnCar ? 'لا يمكنك طلب شراء سيارتك' : 'طلب شراء', style: IconButton.styleFrom(backgroundColor: gold.withOpacity(.12)), icon: const Icon(Icons.shopping_bag_outlined, color: gold), onPressed: seller == null || isOwnCar ? null : () async {
-          try {
-            await buko_service.FirebaseService.instance.createPurchaseRequest(carId: id, sellerId: seller.toString());
-            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب الشراء ✓')));
-          } catch (error) {
-            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال الطلب: $error')));
-          }
-        }),
-      ])),
-    ));
-  }
-}
-
 class SellPage extends StatefulWidget {
   const SellPage({super.key});
   @override

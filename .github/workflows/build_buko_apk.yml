@@ -78,7 +78,7 @@ jobs:
           echo "$RESPONSE"
           echo "$RESPONSE" | grep -q 'INVALID_CUSTOM_TOKEN'
 
-      - name: Deploy Firestore rules
+      - name: Deploy Firestore rules and indexes
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
@@ -87,8 +87,8 @@ jobs:
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
           python3 -m json.tool "$RUNNER_TEMP/firebase-service-account.json" >/dev/null
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-service-account.json"
-          npx --yes firebase-tools@latest deploy --only firestore:rules --project buko-6f769 --non-interactive
-          echo 'Firestore rules deployment completed successfully.'
+          npx --yes firebase-tools@latest deploy --only firestore:rules,firestore:indexes --project buko-6f769 --non-interactive
+          echo 'Firestore rules and indexes deployment completed successfully.'
           rm -f "$RUNNER_TEMP/firebase-service-account.json"
 
       - name: Build release APK

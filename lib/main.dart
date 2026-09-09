@@ -19,14 +19,20 @@ const panel = Color(0xFF11161E);
 const muted = Color(0xFF9BA6B5);
 
 Future<void> _openBukoWhatsApp(BuildContext context) async {
-  final uri = Uri.parse('https://wa.me/249909976346?text=${Uri.encodeComponent('مرحباً BUKO، أريد الاستعلام عن السيارات المعروضة.')}');
-  if (await canLaunchUrl(uri)) {
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  } else if (context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر فتح واتساب.')));
+  const phone = '249909976346';
+  final text = Uri.encodeComponent('مرحباً BUKO، أريد الاستعلام عن السيارات المعروضة.');
+  final appUri = Uri.parse('whatsapp://send?phone=$phone&text=$text');
+  final webUri = Uri.parse('https://wa.me/$phone?text=$text');
+  try {
+    if (await launchUrl(appUri, mode: LaunchMode.externalApplication)) return;
+    if (await launchUrl(webUri, mode: LaunchMode.externalApplication)) return;
+  } catch (_) {}
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('تعذر فتح واتساب. سيتم فتح الرابط عبر المتصفح.')),
+    );
   }
 }
-
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -133,7 +139,7 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 10),
               if (snapshot.hasError) const _Info('تعذر تحميل السيارات حالياً.'),
               if (docs.isEmpty && !snapshot.hasError) const _Info('لا توجد إعلانات منشورة بعد. كن أول من يضيف سيارة!'),
-              ...docs.map((doc) => ModernModernCarCard(data: doc.data(), id: doc.id)),
+              ...docs.map((doc) => ModernCarCard(data: doc.data(), id: doc.id)),
             ],
           );
         },
@@ -167,7 +173,26 @@ class _TopBarState extends State<_TopBar> {
           Text('BUKO', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1.3)),
           Text('سيارات مستعملة بثقة وسهولة', style: TextStyle(fontSize: 12, color: muted)),
         ])),
-        Row(mainAxisSize: MainAxisSize.min, children: [IconButton(tooltip: 'استعلام واتساب', onPressed: () => _openBukoWhatsApp(context), icon: const Icon(Icons.chat_rounded, color: Color(0xFF25D366))), IconButton(tooltip: 'الإشعارات', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا توجد إشعارات جديدة'))), icon: const Icon(Icons.notifications_none_rounded))]),
+        Row(mainAxisSize: MainAxisSize.min, children: [
+          Material(
+            color: const Color(0xFF25D366),
+            borderRadius: BorderRadius.circular(14),
+            child: InkWell(
+              onTap: () => _openBukoWhatsApp(context),
+              borderRadius: BorderRadius.circular(14),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.chat_rounded, color: Colors.white, size: 20),
+                  SizedBox(width: 5),
+                  Text('واتساب', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12)),
+                ]),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          IconButton(tooltip: 'الإشعارات', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا توجد إشعارات جديدة'))), icon: const Icon(Icons.notifications_none_rounded)),
+        ]),
       ]);
 }
 
@@ -297,7 +322,7 @@ class _ExplorePageState extends State<ExplorePage> {
             const SizedBox(height: 16),
             if (snapshot.hasError) const _Info('تعذر تحميل السيارات حالياً.'),
             if (docs.isEmpty && !snapshot.hasError) const _Info('لا توجد سيارات مطابقة للبحث.'),
-            ...docs.map((doc) => ModernModernCarCard(data: doc.data(), id: doc.id)),
+            ...docs.map((doc) => ModernCarCard(data: doc.data(), id: doc.id)),
           ]);
         },
       );

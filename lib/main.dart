@@ -133,7 +133,7 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 10),
               if (snapshot.hasError) const _Info('تعذر تحميل السيارات حالياً.'),
               if (docs.isEmpty && !snapshot.hasError) const _Info('لا توجد إعلانات منشورة بعد. كن أول من يضيف سيارة!'),
-              ...docs.map((doc) => ModernModernCarCard(data: doc.data(), id: doc.id)),
+              ...docs.map((doc) => ModernCarCard(data: doc.data(), id: doc.id)),
             ],
           );
         },
@@ -297,7 +297,7 @@ class _ExplorePageState extends State<ExplorePage> {
             const SizedBox(height: 16),
             if (snapshot.hasError) const _Info('تعذر تحميل السيارات حالياً.'),
             if (docs.isEmpty && !snapshot.hasError) const _Info('لا توجد سيارات مطابقة للبحث.'),
-            ...docs.map((doc) => ModernModernCarCard(data: doc.data(), id: doc.id)),
+            ...docs.map((doc) => ModernCarCard(data: doc.data(), id: doc.id)),
           ]);
         },
       );
@@ -389,7 +389,7 @@ class FavoritesPage extends StatelessWidget {
           return ListView(padding: const EdgeInsets.fromLTRB(16, 18, 16, 28), children: [
             const Text('المفضلة', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
             const SizedBox(height: 12),
-            ...items.entries.map((entry) => ModernModernCarCard(data: entry.value, id: entry.key)),
+            ...items.entries.map((entry) => ModernCarCard(data: entry.value, id: entry.key)),
           ]);
         },
       );

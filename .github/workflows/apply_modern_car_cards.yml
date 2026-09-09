@@ -1,5 +1,6 @@
 name: Apply BUKO home UI updates
 
+# Clean build trigger after card wiring repair.
 on:
   push:
     branches: [main]

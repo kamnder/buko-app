@@ -28,7 +28,7 @@ jobs:
           s = p.read_text()
           s = s.replace('ModernModernModernCarCard(', 'ModernCarCard(')
           s = s.replace('ModernModernCarCard(', 'ModernCarCard(')
-          s = s.replace('CarCard(', 'ModernCarCard(')
+          s = s.replace('CarCard(data:', 'ModernCarCard(data:')
           p.write_text(s)
           PY
 

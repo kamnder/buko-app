@@ -8,7 +8,7 @@ on:
 permissions:
   contents: write
 
-# FINAL BUILD — backend verified, phone/password only, Cloudinary images, animated UI, admin.
+# FINAL BUILD — clean card wiring, backend verified, phone/password only, Cloudinary images, animated UI, admin.
 
 jobs:
   build:

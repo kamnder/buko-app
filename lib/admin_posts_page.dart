@@ -17,6 +17,37 @@ class _AdminPostsPageState extends State<AdminPostsPage> {
   final db = FirebaseFirestore.instance;
   bool busy = false;
 
+  Future<void> _review(String id, String value) async {
+    if (busy) return;
+    setState(() => busy = true);
+    try {
+      await db.collection('cars').doc(id).update({
+        'status': value,
+        'reviewedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              value == 'approved'
+                  ? 'تم قبول المراجعة ونشر الإعلان ✓'
+                  : 'تم رفض الإعلان وعدم نشره',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تعذر تنفيذ المراجعة: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
   Future<void> _status(String id, String value) async {
     if (busy) return;
     setState(() => busy = true);
@@ -265,6 +296,39 @@ class _AdminPostsPageState extends State<AdminPostsPage> {
                           '${data['price'] ?? '-'} • ${data['city'] ?? '-'}',
                           style: const TextStyle(color: _muted),
                         ),
+                        if ((data['status'] ?? 'pending').toString() == 'pending') ...[
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: _gold.withOpacity(.08),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: _gold.withOpacity(.25)),
+                            ),
+                            child: Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                const Row(mainAxisSize: MainAxisSize.min, children: [
+                                  Icon(Icons.rate_review_outlined, color: _gold, size: 20),
+                                  SizedBox(width: 7),
+                                  Text('بانتظار المراجعة', style: TextStyle(fontWeight: FontWeight.w800)),
+                                ]),
+                                FilledButton.icon(
+                                  onPressed: busy ? null : () => _review(doc.id, 'approved'),
+                                  icon: const Icon(Icons.check, size: 18),
+                                  label: const Text('قبول المراجعة'),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: busy ? null : () => _review(doc.id, 'rejected'),
+                                  icon: const Icon(Icons.close, size: 18),
+                                  label: const Text('عدم قبول'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 10),
                         Wrap(
                           spacing: 8,

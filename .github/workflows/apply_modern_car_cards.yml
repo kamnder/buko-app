@@ -5,7 +5,9 @@ on:
     branches: [main]
     paths:
       - 'lib/widgets/modern_car_card.dart'
+      - 'lib/main.dart'
       - 'pubspec.yaml'
+      - '.github/workflows/apply_modern_car_cards.yml'
 
 permissions:
   contents: write
@@ -17,59 +19,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Wire modern cards and WhatsApp inquiry
+      - name: Fix and wire modern cards and WhatsApp inquiry
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
           p = Path('lib/main.dart')
           s = p.read_text()
-          card_import = "import 'widgets/modern_car_card.dart';\n"
-          if card_import not in s:
-              anchor = "import 'services/firebase_service.dart' as buko_service;\n"
-              if anchor not in s: raise SystemExit('main.dart import anchor not found')
-              s = s.replace(anchor, anchor + card_import, 1)
-          if 'CarCard(data:' in s: s = s.replace('CarCard(data:', 'ModernCarCard(data:')
-          wa_import = "import 'package:url_launcher/url_launcher.dart';\n"
-          if wa_import not in s:
-              anchor = "import 'package:image_picker/image_picker.dart';\n"
-              if anchor not in s: raise SystemExit('image_picker import anchor not found')
-              s = s.replace(anchor, anchor + wa_import, 1)
-          if 'whatsappInquiryNumber' not in s:
-              marker = "const muted = Color(0xFF9BA6B5);\n"
-              helper = """
-const String whatsappInquiryNumber = '249909976346';
-
-Future<void> openWhatsAppInquiry(BuildContext context) async {
-  final uri = Uri.parse('https://wa.me/$whatsappInquiryNumber');
-  if (await canLaunchUrl(uri)) {
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  } else if (context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر فتح واتساب.')));
-  }
-}
-"""
-              if marker not in s: raise SystemExit('constants anchor not found')
-              s = s.replace(marker, marker + helper, 1)
-          wa_button = """        IconButton(
-          tooltip: 'استعلام واتساب',
-          onPressed: () => openWhatsAppInquiry(context),
-          icon: const Icon(Icons.chat_rounded, color: gold),
-        ),
-"""
-          notification = "        IconButton(tooltip: 'الإشعارات', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا توجد إشعارات جديدة'))), icon: const Icon(Icons.notifications_none_rounded)),\n"
-          if "tooltip: 'استعلام واتساب'" not in s:
-              if notification not in s: raise SystemExit('notification anchor not found')
-              s = s.replace(notification, wa_button + notification, 1)
+          s = s.replace('ModernModernModernCarCard(', 'ModernCarCard(')
+          s = s.replace('ModernModernCarCard(', 'ModernCarCard(')
+          s = s.replace('CarCard(', 'ModernCarCard(')
           p.write_text(s)
           PY
 
-      - name: Commit UI changes
+      - name: Commit fix
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add lib/main.dart
           git diff --cached --quiet && exit 0
-          git commit -m 'Add WhatsApp inquiry button to home page'
+          git commit -m 'Fix modern car card reference'
           git push

@@ -32,6 +32,7 @@ class _ModernCarCardState extends State<ModernCarCard> {
   String get _type => (widget.data['type'] ?? '').toString().trim();
   String get _year => (widget.data['year'] ?? '').toString().trim();
   String get _sellerId => (widget.data['sellerId'] ?? '').toString().trim();
+  String get _availability => (widget.data['availability'] ?? 'available').toString();
 
   Future<void> _buy() async {
     if (_sending) return;
@@ -142,6 +143,12 @@ class _ModernCarCardState extends State<ModernCarCard> {
               children: [
                 Row(
                   children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                      decoration: BoxDecoration(color: _availability == 'sold' ? Colors.redAccent.withOpacity(.16) : Colors.greenAccent.withOpacity(.12), borderRadius: BorderRadius.circular(14)),
+                      child: Text(_availability == 'sold' ? 'تم البيع' : 'متوفرة', style: TextStyle(color: _availability == 'sold' ? Colors.redAccent : Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.w900)),
+                    ),
+                    const SizedBox(width: 8),
                     _Spec(icon: Icons.calendar_month_rounded, text: _year),
                     const SizedBox(width: 8),
                     if (_city.isNotEmpty)
@@ -162,7 +169,7 @@ class _ModernCarCardState extends State<ModernCarCard> {
                 SizedBox(
                   height: 50,
                   child: FilledButton.icon(
-                    onPressed: _sending ? null : _buy,
+                    onPressed: _sending || _availability == 'sold' ? null : _buy,
                     icon: _sending
                         ? const SizedBox(
                             width: 18,
@@ -170,7 +177,7 @@ class _ModernCarCardState extends State<ModernCarCard> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.shopping_cart_checkout_rounded),
-                    label: Text(_sending ? 'جارٍ الإرسال...' : 'شراء'),
+                    label: Text(_availability == 'sold' ? 'تم البيع' : (_sending ? 'جارٍ الإرسال...' : 'شراء')),
                     style: FilledButton.styleFrom(
                       backgroundColor: _gold,
                       foregroundColor: Colors.black,

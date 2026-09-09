@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'admin_posts_page.dart';
 import 'widgets/animated_background.dart';
 
 const _gold = Color(0xFFFFB51B);
@@ -230,67 +231,7 @@ class _AdminPageState extends State<AdminPage> {
         },
       );
 
-  Widget _adsPage() => Column(children: [
-        _pageTitle('مراجعة الإعلانات', 'الإعلانات التي تحتاج قرار الإدارة.'),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: _searchField('ابحث عن سيارة أو مدينة'),
-        ),
-        Expanded(child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: _db.collection('cars').where('status', isEqualTo: 'pending').orderBy('createdAt', descending: true).snapshots(),
-          builder: (_, snapshot) {
-            if (snapshot.hasError) return const _Error('تعذر تحميل الإعلانات.');
-            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-            final docs = snapshot.data!.docs.where((doc) => _matches(doc.data())).toList();
-            if (docs.isEmpty) return const _Empty(icon: Icons.check_circle_outline, text: 'لا توجد إعلانات بانتظار المراجعة');
-            return ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-              itemCount: docs.length,
-              itemBuilder: (_, i) => _adCard(docs[i]),
-            );
-          },
-        )),
-      ]);
-
-  Widget _adCard(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
-    final d = doc.data();
-    final images = List<String>.from(d['imageUrls'] ?? const <String>[]);
-    return _box(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        if (images.isNotEmpty)
-          ClipRRect(borderRadius: BorderRadius.circular(15), child: Image.network(images.first, height: 175, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _imageFallback()))
-        else
-          _imageFallback(),
-        const SizedBox(height: 12),
-        Row(children: [Expanded(child: Text('${d['name'] ?? 'سيارة'} • ${d['year'] ?? ''}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900))), _status('pending')]),
-        const SizedBox(height: 5),
-        Text('${d['price'] ?? '-'} • ${d['city'] ?? '-'}', style: const TextStyle(color: _gold, fontWeight: FontWeight.w800)),
-        Text('البائع: ${d['sellerId'] ?? '-'}', style: const TextStyle(color: _muted, fontSize: 11)),
-        const SizedBox(height: 12),
-        Row(children: [
-          Expanded(child: FilledButton.icon(onPressed: _loading ? null : () => _showDecision(doc, true), icon: const Icon(Icons.check_rounded), label: const Text('موافقة'))),
-          const SizedBox(width: 8),
-          Expanded(child: OutlinedButton.icon(onPressed: _loading ? null : () => _showDecision(doc, false), icon: const Icon(Icons.close_rounded), label: const Text('رفض'))),
-        ]),
-      ]),
-    );
-  }
-
-  Future<void> _showDecision(QueryDocumentSnapshot<Map<String, dynamic>> doc, bool approve) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(approve ? 'تأكيد الموافقة' : 'تأكيد الرفض'),
-        content: Text(approve ? 'سيظهر الإعلان للمستخدمين بعد الموافقة.' : 'سيتم رفض هذا الإعلان ولن يظهر ضمن الإعلانات المنشورة.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(approve ? 'موافقة' : 'رفض')),
-        ],
-      ),
-    );
-    if (ok == true) await _update('cars', doc.id, approve ? 'approved' : 'rejected');
-  }
+  Widget _adsPage() => const AdminPostsPage();
 
   Widget _usersPage() => Column(children: [
         _pageTitle('إدارة المستخدمين', 'عرض الحسابات وأدوارها.'),

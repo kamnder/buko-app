@@ -5,16 +5,28 @@ import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'admin_login_page.dart';
 import 'firebase_options.dart';
 import 'phone_password_auth_page.dart';
 import 'services/firebase_service.dart' as buko_service;
+import 'widgets/modern_car_card.dart';
 
 const gold = Color(0xFFFFB51B);
 const ink = Color(0xFF080B10);
 const panel = Color(0xFF11161E);
 const muted = Color(0xFF9BA6B5);
+
+Future<void> _openBukoWhatsApp(BuildContext context) async {
+  final uri = Uri.parse('https://wa.me/249909976346?text=${Uri.encodeComponent('مرحباً BUKO، أريد الاستعلام عن السيارات المعروضة.')}');
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  } else if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر فتح واتساب.')));
+  }
+}
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -121,7 +133,7 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 10),
               if (snapshot.hasError) const _Info('تعذر تحميل السيارات حالياً.'),
               if (docs.isEmpty && !snapshot.hasError) const _Info('لا توجد إعلانات منشورة بعد. كن أول من يضيف سيارة!'),
-              ...docs.map((doc) => CarCard(data: doc.data(), id: doc.id)),
+              ...docs.map((doc) => ModernCarCard(data: doc.data(), id: doc.id)),
             ],
           );
         },
@@ -155,7 +167,7 @@ class _TopBarState extends State<_TopBar> {
           Text('BUKO', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1.3)),
           Text('سيارات مستعملة بثقة وسهولة', style: TextStyle(fontSize: 12, color: muted)),
         ])),
-        IconButton(tooltip: 'الإشعارات', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا توجد إشعارات جديدة'))), icon: const Icon(Icons.notifications_none_rounded)),
+        Row(mainAxisSize: MainAxisSize.min, children: [IconButton(tooltip: 'استعلام واتساب', onPressed: () => _openBukoWhatsApp(context), icon: const Icon(Icons.chat_rounded, color: Color(0xFF25D366))), IconButton(tooltip: 'الإشعارات', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا توجد إشعارات جديدة'))), icon: const Icon(Icons.notifications_none_rounded))]),
       ]);
 }
 
@@ -285,7 +297,7 @@ class _ExplorePageState extends State<ExplorePage> {
             const SizedBox(height: 16),
             if (snapshot.hasError) const _Info('تعذر تحميل السيارات حالياً.'),
             if (docs.isEmpty && !snapshot.hasError) const _Info('لا توجد سيارات مطابقة للبحث.'),
-            ...docs.map((doc) => CarCard(data: doc.data(), id: doc.id)),
+            ...docs.map((doc) => ModernCarCard(data: doc.data(), id: doc.id)),
           ]);
         },
       );

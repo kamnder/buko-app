@@ -1,0 +1,84 @@
+name: Apply admin controls and WhatsApp
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/admin_posts_page.dart'
+
+permissions:
+  contents: write
+
+jobs:
+  wire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wire admin page and WhatsApp
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('lib/admin_page.dart')
+          s = p.read_text()
+          imp = "import 'admin_posts_page.dart';\n"
+          if imp not in s:
+              anchor = "import 'package:flutter/material.dart';\n"
+              s = s.replace(anchor, anchor + imp, 1)
+          pattern = r"  Widget _adsPage\(\) =>.*?\n  Widget _usersPage\(\)"
+          repl = "  Widget _adsPage() => const AdminPostsPage();\n\n  Widget _usersPage()"
+          s2, n = re.subn(pattern, repl, s, count=1, flags=re.S)
+          if n != 1:
+              raise SystemExit('Could not wire AdminPostsPage into admin_page.dart')
+          p.write_text(s2)
+
+          p = Path('lib/main.dart')
+          s = p.read_text()
+          imp = "import 'package:url_launcher/url_launcher.dart';\n"
+          if imp not in s:
+              anchor = "import 'package:image_picker/image_picker.dart';\n"
+              s = s.replace(anchor, anchor + imp, 1)
+          helper = """\nFuture<void> _openBukoWhatsApp(BuildContext context) async {\n  final uri = Uri.parse('https://wa.me/249909976346?text=${Uri.encodeComponent('مرحباً BUKO، أريد الاستعلام عن السيارات المعروضة.')}');\n  if (await canLaunchUrl(uri)) {\n    await launchUrl(uri, mode: LaunchMode.externalApplication);\n  } else if (context.mounted) {\n    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر فتح واتساب.')));\n  }\n}\n\n"""
+          if '_openBukoWhatsApp' not in s:
+              anchor = "const muted = Color(0xFF9BA6B5);\n"
+              s = s.replace(anchor, anchor + helper, 1)
+          old = "IconButton(tooltip: 'الإشعارات', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا توجد إشعارات جديدة'))), icon: const Icon(Icons.notifications_none_rounded)),"
+          new = "Row(mainAxisSize: MainAxisSize.min, children: [IconButton(tooltip: 'استعلام واتساب', onPressed: () => _openBukoWhatsApp(context), icon: const Icon(Icons.chat_rounded, color: Color(0xFF25D366))), IconButton(tooltip: 'الإشعارات', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا توجد إشعارات جديدة'))), icon: const Icon(Icons.notifications_none_rounded))]),"
+          if old in s:
+              s = s.replace(old, new, 1)
+          else:
+              print('Top bar notification button pattern not found; WhatsApp may already be wired.')
+          # Ensure the main listing uses the modern card.
+          s = s.replace("CarCard(data: doc.data(), id: doc.id)", "ModernCarCard(data: doc.data(), id: doc.id)")
+          if "import 'widgets/modern_car_card.dart';" not in s:
+              anchor = "import 'services/firebase_service.dart' as buko_service;\n"
+              s = s.replace(anchor, anchor + "import 'widgets/modern_car_card.dart';\n", 1)
+          p.write_text(s)
+
+          # Add availability label to the modern card without changing its purchase flow.
+          p = Path('lib/widgets/modern_car_card.dart')
+          s = p.read_text()
+          marker = "  String get _sellerId => (widget.data['sellerId'] ?? '').toString().trim();\n"
+          addition = marker + "  String get _availability => (widget.data['availability'] ?? 'available').toString();\n"
+          if "String get _availability" not in s:
+              s = s.replace(marker, addition, 1)
+          needle = "                Row(\n                  children: [\n                    _Spec(icon: Icons.calendar_month_rounded, text: _year),"
+          replacement = "                Row(\n                  children: [\n                    Container(\n                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),\n                      decoration: BoxDecoration(color: _availability == 'sold' ? Colors.redAccent.withOpacity(.16) : Colors.greenAccent.withOpacity(.12), borderRadius: BorderRadius.circular(14)),\n                      child: Text(_availability == 'sold' ? 'تم البيع' : 'متوفرة', style: TextStyle(color: _availability == 'sold' ? Colors.redAccent : Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.w900)),\n                    ),\n                    const SizedBox(width: 8),\n                    _Spec(icon: Icons.calendar_month_rounded, text: _year),"
+          if "_availability == 'sold' ? 'تم البيع' : 'متوفرة'" not in s:
+              s = s.replace(needle, replacement, 1)
+          # Disable buying sold cars.
+          s = s.replace("onPressed: _sending ? null : _buy,", "onPressed: _sending || _availability == 'sold' ? null : _buy,")
+          s = s.replace("label: Text(_sending ? 'جارٍ الإرسال...' : 'شراء'),", "label: Text(_availability == 'sold' ? 'تم البيع' : (_sending ? 'جارٍ الإرسال...' : 'شراء')),")
+          p.write_text(s)
+          PY
+      - name: Commit changes
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add lib/admin_page.dart lib/main.dart lib/widgets/modern_car_card.dart
+          git diff --cached --quiet && exit 0
+          git commit -m 'Add admin post controls and WhatsApp contact button'
+          git push

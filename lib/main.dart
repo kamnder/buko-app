@@ -419,7 +419,7 @@ class FavoritesPage extends StatelessWidget {
           return ListView(padding: const EdgeInsets.fromLTRB(16, 18, 16, 28), children: [
             const Text('المفضلة', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
             const SizedBox(height: 12),
-            ...items.entries.map((entry) => ModernCarCard(data: entry.value, id: entry.key)),
+            ...items.entries.map((entry) => ModernModernCarCard(data: entry.value, id: entry.key)),
           ]);
         },
       );

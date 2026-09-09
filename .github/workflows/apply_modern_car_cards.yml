@@ -1,12 +1,12 @@
 name: Apply BUKO home UI updates
 
-# Clean build trigger after card wiring repair.
 on:
   push:
     branches: [main]
     paths:
       - 'lib/widgets/modern_car_card.dart'
       - 'lib/main.dart'
+      - 'lib/admin_posts_page.dart'
       - 'pubspec.yaml'
       - '.github/workflows/apply_modern_car_cards.yml'
 
@@ -20,18 +20,121 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Normalize modern card wiring
+      - name: Normalize and apply UI fixes
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
+
           p = Path('lib/main.dart')
           s = p.read_text()
           s = s.replace('ModernModernModernCarCard(', 'ModernCarCard(')
           s = s.replace('ModernModernCarCard(', 'ModernCarCard(')
           s = s.replace('...docs.map((doc) => CarCard(', '...docs.map((doc) => ModernCarCard(')
-          s = s.replace('class CarCard extends StatelessWidget {', 'class LegacyCarCard extends StatelessWidget {')
-          s = s.replace('const ModernCarCard({super.key, required this.data, required this.id});', 'const LegacyCarCard({super.key, required this.data, required this.id});')
+
+          old = """Future<void> _openBukoWhatsApp(BuildContext context) async {
+            final uri = Uri.parse('https://wa.me/249909976346?text=${Uri.encodeComponent('مرحباً BUKO، أريد الاستعلام عن السيارات المعروضة.')}');
+            if (await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            } else if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر فتح واتساب.')));
+            }
+          }"""
+          new = """Future<void> _openBukoWhatsApp(BuildContext context) async {
+            const phone = '249909976346';
+            final message = Uri.encodeComponent('مرحباً BUKO، أريد الاستعلام عن السيارات المعروضة.');
+            final appUri = Uri.parse('whatsapp://send?phone=$phone&text=$message');
+            final webUri = Uri.parse('https://wa.me/$phone?text=$message');
+            try {
+              if (await canLaunchUrl(appUri)) {
+                await launchUrl(appUri, mode: LaunchMode.externalApplication);
+                return;
+              }
+              if (await canLaunchUrl(webUri)) {
+                await launchUrl(webUri, mode: LaunchMode.externalApplication);
+                return;
+              }
+            } catch (_) {}
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر فتح واتساب. تأكد من تثبيت واتساب أو وجود متصفح.')));
+            }
+          }"""
+          if old in s:
+              s = s.replace(old, new, 1)
+
+          old_ui = """IconButton(tooltip: 'استعلام واتساب', onPressed: () => _openBukoWhatsApp(context), icon: const Icon(Icons.chat_rounded, color: Color(0xFF25D366))),"""
+          new_ui = """FilledButton.icon(
+              onPressed: () => _openBukoWhatsApp(context),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF25D366),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              icon: const Icon(Icons.chat_rounded, size: 21),
+              label: const Text('واتساب', style: TextStyle(fontWeight: FontWeight.w800)),
+            ),"""
+          if old_ui in s:
+              s = s.replace(old_ui, new_ui, 1)
+          p.write_text(s)
+
+          p = Path('lib/admin_posts_page.dart')
+          s = p.read_text()
+          marker = """  Future<void> _status(String id, String value) async {"""
+          if marker in s and 'Future<void> _review(' not in s:
+              review = """  Future<void> _review(String id, String value) async {
+            if (busy) return;
+            setState(() => busy = true);
+            try {
+              await db.collection('cars').doc(id).update({
+                'status': value,
+                'reviewedAt': FieldValue.serverTimestamp(),
+                'updatedAt': FieldValue.serverTimestamp(),
+              });
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(value == 'approved' ? 'تم قبول المراجعة ونشر الإعلان ✓' : 'تم عدم قبول المراجعة')),
+                );
+              }
+            } catch (e) {
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تنفيذ المراجعة: $e')));
+            } finally {
+              if (mounted) setState(() => busy = false);
+            }
+          }
+
+"""
+              s = s.replace(marker, review + marker, 1)
+
+          ui_marker = """                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,"""
+          ui_new = """                        if ('${data['status'] ?? 'pending'}' == 'pending') ...[
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: _gold.withOpacity(.08),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: _gold.withOpacity(.25)),
+                            ),
+                            child: Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.rate_review_outlined, color: _gold, size: 20), SizedBox(width: 7), Text('بانتظار المراجعة', style: TextStyle(fontWeight: FontWeight.w800))]),
+                                FilledButton.icon(onPressed: busy ? null : () => _review(doc.id, 'approved'), icon: const Icon(Icons.check, size: 18), label: const Text('قبول المراجعة')),
+                                OutlinedButton.icon(onPressed: busy ? null : () => _review(doc.id, 'rejected'), icon: const Icon(Icons.close, size: 18), label: const Text('عدم قبول')),
+                              ],
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,"""
+          if ui_marker in s and "'بانتظار المراجعة'" not in s:
+              s = s.replace(ui_marker, ui_new, 1)
           p.write_text(s)
           PY
 
@@ -40,7 +143,7 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add lib/main.dart
+          git add lib/main.dart lib/admin_posts_page.dart
           git diff --cached --quiet && exit 0
-          git commit -m 'Fix legacy card naming safely'
+          git commit -m 'Fix WhatsApp chat and admin ad review'
           git push
